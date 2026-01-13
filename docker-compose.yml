@@ -6,7 +6,7 @@ services:
     container_name: it-log-app
     build: .
     ports:
-      - "3000:3000"
+      - "38000:3000"
     environment:
       - PORT=3000
       - DB_HOST=db             # สำคัญ: ใน Docker ต้องเรียกชื่อ Service ว่า "db" ห้ามใช้ localhost

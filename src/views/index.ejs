@@ -12,14 +12,29 @@
 
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
-        /* Custom Scrollbar for modern look */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        /* เพิ่ม Cursor Pointer ให้หัวตาราง */
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { background-color: #334155; } /* สีตอนเอาเมาส์ชี้ */
     </style>
 </head>
 <body class="text-slate-800">
+
+    <%
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const d = new Date(dateString);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = String(d.getFullYear()).slice(-2);
+            const hour = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${day}.${month}.${year} ${hour}:${min}`;
+        }
+    %>
 
     <div class="container mx-auto px-4 py-8 max-w-7xl">
         
@@ -34,15 +49,22 @@
                 <p class="text-sm text-slate-500 ml-1">ระบบข้อมูลย้อนหลัง (Legacy Data Management)</p>
             </div>
             
-            <button id="btnSync" onclick="syncData()" 
-                class="group bg-slate-800 hover:bg-blue-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2 border border-transparent hover:border-blue-500">
-                <i class="fa-solid fa-rotate group-hover:animate-spin"></i>
-                <span>Sync Data</span>
-            </button>
+            <div class="flex gap-3">
+                <button id="btnClear" onclick="clearData()" 
+                    class="group bg-white hover:bg-red-50 text-red-600 hover:text-red-700 font-medium py-2.5 px-5 rounded-lg shadow-sm border border-red-200 hover:border-red-300 transition-all duration-200 flex items-center gap-2">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Clear Data</span>
+                </button>
+
+                <button id="btnSync" onclick="syncData()" 
+                    class="group bg-slate-800 hover:bg-blue-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2 border border-transparent hover:border-blue-500">
+                    <i class="fa-solid fa-rotate group-hover:animate-spin"></i>
+                    <span>Sync Data</span>
+                </button>
+            </div>
         </div>
 
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            
             <div class="md:col-span-2 relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
@@ -60,8 +82,7 @@
                     class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
                     <option value="">ทุกหมวดหมู่ (All Categories)</option>
                     <% 
-                        // ดึง Category ที่ไม่ซ้ำกันออกมาจาก logs
-                        const uniqueCats = [...new Set(logs.map(item => item.category))].filter(Boolean).sort();
+                        const uniqueCats = [...new Set(logs.map(item => (item.category || '').trim()))].filter(Boolean).sort();
                         uniqueCats.forEach(cat => { 
                     %>
                         <option value="<%= cat %>"><%= cat %></option>
@@ -80,8 +101,7 @@
                     class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
                     <option value="">สถานะทั้งหมด (All Status)</option>
                     <% 
-                        // ดึง Status ที่ไม่ซ้ำกัน
-                        const uniqueStatus = [...new Set(logs.map(item => item.status))].filter(Boolean).sort();
+                        const uniqueStatus = [...new Set(logs.map(item => (item.status || '').trim()))].filter(Boolean).sort();
                         uniqueStatus.forEach(st => { 
                     %>
                         <option value="<%= st %>"><%= st %></option>
@@ -98,66 +118,118 @@
                 <table class="w-full text-sm text-left" id="mainTable">
                     <thead class="bg-slate-800 text-white uppercase text-xs sticky top-0">
                         <tr>
-                            <th class="px-6 py-4 font-semibold tracking-wider w-32">Ticket No.</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider w-40">Category</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider min-w-[300px]">Details</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider w-48">Reporter</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider text-center w-32">Status</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider text-right w-40">Date</th>
+                            <th onclick="sortTable(0)" class="sortable px-6 py-4 font-semibold tracking-wider w-32 group">
+                                Ticket No. <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                            </th>
+                            <th onclick="sortTable(1)" class="sortable px-6 py-4 font-semibold tracking-wider w-32 group">
+                                Category <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                            </th>
+                            <th onclick="sortTable(2)" class="sortable px-6 py-4 font-semibold tracking-wider min-w-[300px] group">
+                                Details <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                            </th>
+                            <th onclick="sortTable(3, 'number')" class="sortable px-6 py-4 font-semibold tracking-wider text-right w-24 group">
+                                Cost <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                            </th>
+                            <th onclick="sortTable(4)" class="sortable px-6 py-4 font-semibold tracking-wider w-56 group">
+                                Reporter <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                            </th>
+                            <th onclick="sortTable(5, 'date')" class="sortable px-6 py-4 font-semibold tracking-wider text-right w-48 group">
+                                Status & Dates <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 bg-white" id="tableBody">
                         <% if (logs.length > 0) { %>
                             <% logs.forEach(function(log, index) { %>
-                                <tr class="hover:bg-blue-50 transition-colors duration-150 group table-row">
+                                <tr class="hover:bg-blue-50 transition-colors duration-150 group table-row" 
+                                    data-filter-category="<%= (log.category || '').trim() %>" 
+                                    data-filter-status="<%= (log.status || '').trim() %>">
                                     
-                                    <td class="px-6 py-4 whitespace-nowrap">
+                                    <td class="px-6 py-4 whitespace-nowrap" data-sort="<%= log.ticket_no %>">
                                         <div class="flex items-center gap-2">
                                             <i class="fa-solid fa-ticket text-slate-300 group-hover:text-blue-500 transition-colors"></i>
                                             <span class="font-bold text-blue-600 font-mono text-base"><%= log.ticket_no %></span>
                                         </div>
                                     </td>
 
-                                    <td class="px-6 py-4 whitespace-nowrap" data-filter-category="<%= log.category %>">
+                                    <td class="px-6 py-4 whitespace-nowrap" data-sort="<%= log.category %>">
                                         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-semibold border border-slate-200">
                                             <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                                             <%= log.category %>
                                         </span>
                                     </td>
 
-                                    <td class="px-6 py-4 text-slate-600 leading-relaxed text-sm">
-                                        <div class="line-clamp-2 hover:line-clamp-none transition-all duration-300">
+                                    <td class="px-6 py-4 text-slate-600 leading-relaxed text-sm" data-sort="<%= log.details %>">
+                                        <div class="mb-1 font-medium text-slate-800">อาการ:</div>
+                                        <div class="line-clamp-2 hover:line-clamp-none transition-all duration-300 mb-2">
                                             <%= log.details %>
                                         </div>
-                                    </td>
-
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="font-medium text-slate-900"><%= log.reporter_name %></div>
-                                        <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                                            <i class="fa-regular fa-building"></i> <%= log.reporter_dept %>
-                                        </div>
-                                    </td>
-
-                                    <td class="px-6 py-4 whitespace-nowrap text-center" data-filter-status="<%= log.status %>">
-                                        <% if (log.status === 'เสร็จสิ้น') { %>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                                <i class="fa-solid fa-check mr-1.5 text-[10px]"></i> <%= log.status %>
-                                            </span>
-                                        <% } else { %>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                                                <i class="fa-solid fa-clock mr-1.5 text-[10px]"></i> <%= log.status %>
-                                            </span>
+                                        <% if(log.solution) { %>
+                                            <div class="text-xs text-green-700 bg-green-50 p-2 rounded border border-green-100">
+                                                <i class="fa-solid fa-screwdriver-wrench mr-1"></i> 
+                                                <%= log.solution %>
+                                            </div>
                                         <% } %>
                                     </td>
 
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        <div class="text-slate-500 font-mono text-xs">
-                                            <%= log.created_date ? new Date(log.created_date).toLocaleDateString('th-TH', { year: '2-digit', month: '2-digit', day: '2-digit' }) : '-' %>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right font-mono text-slate-700" data-sort="<%= log.cost || 0 %>">
+                                        <%= parseFloat(log.cost || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) %>
+                                    </td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap" data-sort="<%= log.reporter_name %>">
+                                        <div class="flex items-center gap-2 mb-2" title="ผู้แจ้ง">
+                                            <div class="font-medium text-slate-900 text-xs">
+                                                <i class="fa-regular fa-user mr-1 text-slate-400"></i> <%= log.reporter_name %>
+                                            </div>
+                                            <% if(log.reporter_dept) { %>
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 font-mono">
+                                                    <%= log.reporter_dept %>
+                                                </span>
+                                            <% } %>
                                         </div>
-                                        <div class="text-slate-400 text-[10px]">
-                                            <%= log.created_date ? new Date(log.created_date).toLocaleTimeString('th-TH', { hour: '2-digit', minute:'2-digit' }) : '' %>
+                                        <div class="flex items-center gap-2" title="ผู้รับผิดชอบ">
+                                            <div class="text-xs text-blue-600">
+                                                <i class="fa-solid fa-user-gear mr-1"></i> <%= log.responsible_person || '-' %>
+                                            </div>
+                                            <% if(log.responsible_dept) { %>
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-mono">
+                                                    <%= log.responsible_dept %>
+                                                </span>
+                                            <% } %>
                                         </div>
                                     </td>
+
+                                    <td class="px-6 py-4 whitespace-nowrap text-right" data-sort="<%= log.created_date %>">
+                                        <div class="flex flex-col items-end gap-2">
+                                            <div>
+                                                <% if (log.status === 'closed' || log.status === 'เสร็จสิ้น') { %>
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                        <i class="fa-solid fa-check mr-1.5 text-[10px]"></i> <%= log.status %>
+                                                    </span>
+                                                <% } else { %>
+                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                                                        <i class="fa-solid fa-clock mr-1.5 text-[10px]"></i> <%= log.status %>
+                                                    </span>
+                                                <% } %>
+                                            </div>
+
+                                            <div class="flex flex-col gap-0.5">
+                                                <div class="text-xs text-slate-500">
+                                                    <span class="text-[10px] text-slate-400 mr-1">รับ:</span>
+                                                    <span class="font-mono text-slate-600">
+                                                        <%= formatDate(log.created_date) %>
+                                                    </span>
+                                                </div>
+                                                <div class="text-xs text-slate-500">
+                                                    <span class="text-[10px] text-green-600 mr-1">ปิด:</span>
+                                                    <span class="font-mono text-slate-600">
+                                                        <%= formatDate(log.finished_date) %>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
                                 </tr>
                             <% }); %>
                         <% } else { %>
@@ -185,7 +257,7 @@
             
             <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
                 <span id="showingCount">Displaying all <%= logs.length %> items</span>
-                <span class="font-mono opacity-50">v1.0.2 By IT Dev</span>
+                <span class="font-mono opacity-50">v1.3.0 By IT Dev</span>
             </div>
         </div>
     </div>

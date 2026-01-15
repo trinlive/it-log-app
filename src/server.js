@@ -21,6 +21,19 @@ app.set('views', './src/views');
 // 1. Route สำหรับ API Sync (ทำงานเบื้องหลัง)
 app.get('/api/sync', syncController.syncFromLegacy);
 
+app.post('/api/clear', async (req, res) => {
+    try {
+        // คำสั่ง Truncate จะลบข้อมูลทั้งหมดในตารางและรีเซ็ต ID
+        await OldLog.destroy({ where: {}, truncate: true });
+        res.json({ success: true, message: 'All data cleared successfully' });
+    } catch (error) {
+        console.error('❌ Clear Error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
 // 2. Route หน้าแรก (Dashboard แสดงตาราง)
 app.get('/', async (req, res) => {
     try {
@@ -54,8 +67,8 @@ const startServer = async () => {
         console.log('✅ Connection to MariaDB has been established successfully.');
 
         // 2. Sync Table (สร้างตารางถ้ายังไม่มี)
-        await db.sync(); 
-        console.log('✅ Database Synced.');
+        await db.sync({ alter: true });
+        console.log('✅ Database Synced (Altered).');
 
         // 3. เริ่มรัน Server
         app.listen(PORT, () => {

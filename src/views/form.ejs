@@ -1,0 +1,29 @@
+<select name="job_type" class="form-select" required>
+    <option value="" selected disabled>-- เลือกประเภทงาน --</option>
+    <% jobTypes.forEach(function(item) { %>
+        <option value="<%= item.name %>">
+            <%= item.name %>
+        </option>
+        <% }); %>
+</select>
+
+<select name="responsible_person" class="form-select" required>
+    <option value="" selected disabled>-- เลือกผู้รับผิดชอบ --</option>
+    <% staffs.forEach(function(item) { %>
+        <option value="<%= item.name %>">
+            <%= item.name %>
+        </option>
+        <% }); %>
+</select>
+
+<select name="status" class="form-select">
+    <% statuses.forEach(function(item) { %>
+        <option value="<%= item.name %>" class="<%= item.color_class %> fw-bold">
+            <%= item.name %>
+        </option>
+        <% }); %>
+</select>
+
+<div class="d-flex justify-content-between mt-3">
+    <a href="/settings" class="btn btn-outline-secondary btn-sm">⚙️ จัดการตัวเลือก (Back Office)</a>
+</div>

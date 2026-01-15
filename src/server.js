@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const db = require('./config/database');
 const OldLog = require('./models/OldLog'); // ✅ Import Model เพื่อใช้ดึงข้อมูล
 const app = express();
@@ -11,6 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Config View Engine (ตั้งค่าให้ใช้ EJS)
+app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', './src/views');
 

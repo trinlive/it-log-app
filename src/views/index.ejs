@@ -6,151 +6,191 @@
     <title>IT Helpdesk Logs</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
     
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        /* Custom Scrollbar for modern look */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
     </style>
 </head>
-<body class="text-gray-800">
+<body class="text-slate-800">
 
     <div class="container mx-auto px-4 py-8 max-w-7xl">
         
-        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div class="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-gray-800">📋 IT Helpdesk Logs</h1>
-                <p class="text-sm text-gray-500 mt-1">ข้อมูลย้อนหลัง (Legacy Data)</p>
+                <div class="flex items-center gap-3 mb-1">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg shadow-sm">
+                        <i class="fa-solid fa-server text-xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-800 tracking-tight">IT Helpdesk Logs</h1>
+                </div>
+                <p class="text-sm text-slate-500 ml-1">ระบบข้อมูลย้อนหลัง (Legacy Data Management)</p>
             </div>
             
             <button id="btnSync" onclick="syncData()" 
-                class="group bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-5 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2">
+                class="group bg-slate-800 hover:bg-blue-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-md transition-all duration-200 flex items-center gap-2 border border-transparent hover:border-blue-500">
                 <i class="fa-solid fa-rotate group-hover:animate-spin"></i>
                 <span>Sync Data</span>
             </button>
         </div>
 
-        <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-200">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <div class="md:col-span-2 relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+                </div>
+                <input type="text" id="searchInput" onkeyup="filterTable()" 
+                    class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out sm:text-sm" 
+                    placeholder="ค้นหา Ticket No, รายละเอียด, หรือชื่อผู้แจ้ง...">
+            </div>
+
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-layer-group text-slate-400"></i>
+                </div>
+                <select id="categoryFilter" onchange="filterTable()" 
+                    class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
+                    <option value="">ทุกหมวดหมู่ (All Categories)</option>
+                    <% 
+                        // ดึง Category ที่ไม่ซ้ำกันออกมาจาก logs
+                        const uniqueCats = [...new Set(logs.map(item => item.category))].filter(Boolean).sort();
+                        uniqueCats.forEach(cat => { 
+                    %>
+                        <option value="<%= cat %>"><%= cat %></option>
+                    <% }); %>
+                </select>
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                </div>
+            </div>
+
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-list-check text-slate-400"></i>
+                </div>
+                <select id="statusFilter" onchange="filterTable()" 
+                    class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
+                    <option value="">สถานะทั้งหมด (All Status)</option>
+                    <% 
+                        // ดึง Status ที่ไม่ซ้ำกัน
+                        const uniqueStatus = [...new Set(logs.map(item => item.status))].filter(Boolean).sort();
+                        uniqueStatus.forEach(st => { 
+                    %>
+                        <option value="<%= st %>"><%= st %></option>
+                    <% }); %>
+                </select>
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-slate-200">
             <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-800 text-white uppercase text-xs">
+                <table class="w-full text-sm text-left" id="mainTable">
+                    <thead class="bg-slate-800 text-white uppercase text-xs sticky top-0">
                         <tr>
-                            <th class="px-6 py-4 font-semibold tracking-wider">Ticket No.</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider">Category</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider w-1/3">Details</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider">Reporter</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider text-center">Status</th>
-                            <th class="px-6 py-4 font-semibold tracking-wider text-right">Date</th>
+                            <th class="px-6 py-4 font-semibold tracking-wider w-32">Ticket No.</th>
+                            <th class="px-6 py-4 font-semibold tracking-wider w-40">Category</th>
+                            <th class="px-6 py-4 font-semibold tracking-wider min-w-[300px]">Details</th>
+                            <th class="px-6 py-4 font-semibold tracking-wider w-48">Reporter</th>
+                            <th class="px-6 py-4 font-semibold tracking-wider text-center w-32">Status</th>
+                            <th class="px-6 py-4 font-semibold tracking-wider text-right w-40">Date</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200">
+                    <tbody class="divide-y divide-slate-100 bg-white" id="tableBody">
                         <% if (logs.length > 0) { %>
                             <% logs.forEach(function(log, index) { %>
-                                <tr class="hover:bg-blue-50 transition-colors duration-150 <%= index % 2 === 0 ? 'bg-white' : 'bg-gray-50' %>">
+                                <tr class="hover:bg-blue-50 transition-colors duration-150 group table-row">
                                     
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="font-bold text-blue-600 font-mono"><%= log.ticket_no %></span>
+                                        <div class="flex items-center gap-2">
+                                            <i class="fa-solid fa-ticket text-slate-300 group-hover:text-blue-500 transition-colors"></i>
+                                            <span class="font-bold text-blue-600 font-mono text-base"><%= log.ticket_no %></span>
+                                        </div>
                                     </td>
 
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 py-1 text-xs font-semibold rounded-md bg-gray-200 text-gray-700 border border-gray-300">
+                                    <td class="px-6 py-4 whitespace-nowrap" data-filter-category="<%= log.category %>">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-semibold border border-slate-200">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
                                             <%= log.category %>
                                         </span>
                                     </td>
 
-                                    <td class="px-6 py-4 text-gray-600 leading-relaxed">
-                                        <%= log.details %>
+                                    <td class="px-6 py-4 text-slate-600 leading-relaxed text-sm">
+                                        <div class="line-clamp-2 hover:line-clamp-none transition-all duration-300">
+                                            <%= log.details %>
+                                        </div>
                                     </td>
 
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="font-medium text-gray-900"><%= log.reporter_name %></div>
-                                        <div class="text-xs text-gray-400 mt-0.5"><%= log.reporter_dept %></div>
+                                        <div class="font-medium text-slate-900"><%= log.reporter_name %></div>
+                                        <div class="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
+                                            <i class="fa-regular fa-building"></i> <%= log.reporter_dept %>
+                                        </div>
                                     </td>
 
-                                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    <td class="px-6 py-4 whitespace-nowrap text-center" data-filter-status="<%= log.status %>">
                                         <% if (log.status === 'เสร็จสิ้น') { %>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                                                <span class="w-1.5 h-1.5 mr-1.5 bg-green-500 rounded-full"></span>
-                                                <%= log.status %>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                <i class="fa-solid fa-check mr-1.5 text-[10px]"></i> <%= log.status %>
                                             </span>
                                         <% } else { %>
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                                <span class="w-1.5 h-1.5 mr-1.5 bg-yellow-500 rounded-full"></span>
-                                                <%= log.status %>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                                                <i class="fa-solid fa-clock mr-1.5 text-[10px]"></i> <%= log.status %>
                                             </span>
                                         <% } %>
                                     </td>
 
-                                    <td class="px-6 py-4 whitespace-nowrap text-right text-gray-500 font-mono text-xs">
-                                        <%= log.created_date ? new Date(log.created_date).toLocaleDateString('th-TH', { year: '2-digit', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' }) : '-' %>
+                                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                                        <div class="text-slate-500 font-mono text-xs">
+                                            <%= log.created_date ? new Date(log.created_date).toLocaleDateString('th-TH', { year: '2-digit', month: '2-digit', day: '2-digit' }) : '-' %>
+                                        </div>
+                                        <div class="text-slate-400 text-[10px]">
+                                            <%= log.created_date ? new Date(log.created_date).toLocaleTimeString('th-TH', { hour: '2-digit', minute:'2-digit' }) : '' %>
+                                        </div>
                                     </td>
                                 </tr>
                             <% }); %>
                         <% } else { %>
-                            <tr>
-                                <td colspan="6" class="px-6 py-10 text-center text-gray-400 bg-gray-50">
-                                    <i class="fa-solid fa-inbox text-4xl mb-3"></i>
-                                    <p>ไม่พบข้อมูลในระบบ</p>
+                            <tr id="noDataRow">
+                                <td colspan="6" class="px-6 py-16 text-center">
+                                    <div class="flex flex-col items-center justify-center text-slate-300">
+                                        <i class="fa-regular fa-folder-open text-6xl mb-4"></i>
+                                        <p class="text-lg text-slate-500 font-medium">ไม่พบข้อมูลในระบบ</p>
+                                        <p class="text-sm text-slate-400">ลองกดปุ่ม Sync Data เพื่อดึงข้อมูลล่าสุด</p>
+                                    </div>
                                 </td>
                             </tr>
                         <% } %>
+                        
+                        <tr id="noResultsRow" class="hidden">
+                            <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                                <i class="fa-solid fa-filter-circle-xmark text-4xl mb-3"></i>
+                                <p>ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</p>
+                            </td>
+                        </tr>
+
                     </tbody>
                 </table>
             </div>
             
-            <div class="bg-gray-50 px-6 py-3 border-t border-gray-200 text-xs text-gray-500 flex justify-between">
-                <span>Displaying latest logs</span>
-                <span>Total: <%= logs.length %> items</span>
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+                <span id="showingCount">Displaying all <%= logs.length %> items</span>
+                <span class="font-mono opacity-50">v1.0.2 By IT Dev</span>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
-    <script>
-        async function syncData() {
-            const btn = document.getElementById('btnSync');
-            const icon = btn.querySelector('i');
-            const text = btn.querySelector('span');
-            
-            // Loading State
-            btn.disabled = true;
-            btn.classList.add('opacity-75', 'cursor-not-allowed');
-            icon.classList.add('animate-spin');
-            text.textContent = 'Syncing...';
-
-            try {
-                const res = await fetch('/api/sync');
-                const data = await res.json();
-                
-                if(res.ok) {
-                    await Swal.fire({
-                        title: 'Sync Completed!',
-                        text: `Updated ${data.total_records} records successfully.`,
-                        icon: 'success',
-                        confirmButtonColor: '#2563eb'
-                    });
-                    location.reload(); 
-                } else {
-                    throw new Error(data.message || 'Error syncing');
-                }
-            } catch (err) {
-                Swal.fire({
-                    title: 'Sync Failed',
-                    text: err.message,
-                    icon: 'error',
-                    confirmButtonColor: '#dc2626'
-                });
-            } finally {
-                // Reset State
-                btn.disabled = false;
-                btn.classList.remove('opacity-75', 'cursor-not-allowed');
-                icon.classList.remove('animate-spin');
-                text.textContent = 'Sync Data';
-            }
-        }
-    </script>
+    <script src="/js/main.js"></script>
 </body>
 </html>

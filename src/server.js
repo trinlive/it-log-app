@@ -1,76 +1,80 @@
 const express = require('express');
 const path = require('path');
 const db = require('./config/database');
-const OldLog = require('./models/OldLog'); // ✅ Import Model เพื่อใช้ดึงข้อมูล
+const OldLog = require('./models/OldLog');
 const app = express();
 const syncController = require('./controllers/syncController');
+const cron = require('node-cron'); 
 
 const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Config View Engine (ตั้งค่าให้ใช้ EJS)
 app.use(express.static(path.join(__dirname, 'public')));
+
+// View Engine
 app.set('view engine', 'ejs');
 app.set('views', './src/views');
 
 // --- Routes ---
 
-// 1. Route สำหรับ API Sync (ทำงานเบื้องหลัง)
-app.get('/api/sync', syncController.syncFromLegacy);
+// 1. ✅ Route สำหรับ Sync Data (รวม Helpdesk + Request)
+// ปุ่ม "Sync Data" หน้าเว็บจะยิงมาที่นี่
+app.get('/api/sync', syncController.syncAllData);
 
+// 2. ✅ Route สำหรับ Clear Data
+// ปุ่ม "Clear Data" หน้าเว็บจะยิงมาที่นี่
 app.post('/api/clear', async (req, res) => {
     try {
-        // คำสั่ง Truncate จะลบข้อมูลทั้งหมดในตารางและรีเซ็ต ID
+        // ลบข้อมูลทั้งหมดและรีเซ็ต ID
         await OldLog.destroy({ where: {}, truncate: true });
         res.json({ success: true, message: 'All data cleared successfully' });
     } catch (error) {
-        console.error('❌ Clear Error:', error);
+        console.error('Clear Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-
-
-// 2. Route หน้าแรก (Dashboard แสดงตาราง)
+// 3. Route หน้าแรก (Dashboard)
 app.get('/', async (req, res) => {
     try {
-        // ดึงข้อมูลจาก Database (MariaDB)
-        // limit: 500 รายการล่าสุด เพื่อไม่ให้โหลดนานเกินไป
         const logs = await OldLog.findAll({
-            limit: 500,
-            order: [['created_date', 'DESC']] // เรียงจากวันที่ล่าสุดก่อน
+            limit: 1000, // เพิ่ม limit ให้เห็นข้อมูลเยอะขึ้นตอน test
+            order: [['created_date', 'DESC']]
         });
-
-        // ส่งข้อมูล (logs) ไปที่ไฟล์ views/index.ejs
         res.render('index', { logs: logs });
-
     } catch (error) {
-        console.error('❌ Error fetching data:', error);
-        // แสดง Error บนหน้าเว็บถ้ามีปัญหา
+        console.error('Error fetching data:', error);
         res.status(500).send(`
-            <div style="text-align:center; margin-top:50px; font-family:sans-serif;">
-                <h1 style="color:red;">❌ Database Error</h1>
+            <div style="text-align:center; margin-top:50px;">
+                <h1>❌ Database Error</h1>
                 <p>${error.message}</p>
             </div>
         `);
     }
 });
 
-// --- Start Server Function ---
+// --- Scheduled Tasks (Cron Job) ---
+// ตั้งเวลาทำงานอัตโนมัติ (เช่น ทุกวัน 08:00 น.)
+cron.schedule('0 08 * * *', () => { 
+    console.log('⏰ Running Scheduled Sync...');
+    // ตรวจสอบว่ามีฟังก์ชันนี้ไหมก่อนเรียกใช้
+    if (syncController.runScheduledSync) {
+        syncController.runScheduledSync(); 
+    }
+});
+
+// --- Start Server ---
 const startServer = async () => {
     try {
-        // 1. เชื่อมต่อ Database
         await db.authenticate();
         console.log('✅ Connection to MariaDB has been established successfully.');
 
-        // 2. Sync Table (สร้างตารางถ้ายังไม่มี)
-        await db.sync({ alter: true });
+        // ✅ สำคัญ: ใช้ { alter: true } เพื่ออัปเดตโครงสร้างตาราง (เพิ่ม cost, solution ฯลฯ)
+        await db.sync({ alter: true }); 
         console.log('✅ Database Synced (Altered).');
 
-        // 3. เริ่มรัน Server
         app.listen(PORT, () => {
             console.log(`🚀 Server is running on port ${PORT}`);
             console.log(`🌐 Visit: http://localhost:${process.env.EXTERNAL_PORT || 38000}`);

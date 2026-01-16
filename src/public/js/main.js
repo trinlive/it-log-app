@@ -1,82 +1,70 @@
 /**
  * main.js
- * จัดการ Logic การ Filter, Sync, Clear Data และ Sorting
+ * จัดการ Logic Filter, Sorting, Sync, Clear
  */
 
-// เก็บสถานะการ Sort ปัจจุบัน
 let currentSort = { column: -1, direction: 'asc' };
 
-// === 🔃 Logic Sort Table ===
+// === 🔃 Sort Table ===
 function sortTable(columnIndex, type = 'text') {
     const table = document.getElementById("mainTable");
     const tbody = document.getElementById("tableBody");
-    // เลือกเฉพาะแถวข้อมูล (ไม่เอาแถว No Data/No Results)
     const rows = Array.from(tbody.querySelectorAll("tr.table-row"));
     
-    // สลับทิศทาง (Ascending <-> Descending)
     let direction = 'asc';
     if (currentSort.column === columnIndex && currentSort.direction === 'asc') {
         direction = 'desc';
     }
     currentSort = { column: columnIndex, direction: direction };
 
-    // อัปเดตไอคอนหัวตาราง
     updateSortIcons(columnIndex, direction);
 
-    // ทำการเรียงลำดับ
     rows.sort((a, b) => {
-        // ดึงค่าจาก data-sort ที่ฝังไว้ใน td
         let aVal = a.children[columnIndex].getAttribute('data-sort') || '';
         let bVal = b.children[columnIndex].getAttribute('data-sort') || '';
 
         if (type === 'number') {
-            return direction === 'asc' 
-                ? parseFloat(aVal) - parseFloat(bVal) 
-                : parseFloat(bVal) - parseFloat(aVal);
+            return direction === 'asc' ? parseFloat(aVal) - parseFloat(bVal) : parseFloat(bVal) - parseFloat(aVal);
         } else if (type === 'date') {
-            let dateA = new Date(aVal || 0); // ถ้าไม่มีวันที่ให้เป็น 0
+            let dateA = new Date(aVal || 0);
             let dateB = new Date(bVal || 0);
-            return direction === 'asc' 
-                ? dateA - dateB 
-                : dateB - dateA;
+            return direction === 'asc' ? dateA - dateB : dateB - dateA;
         } else {
-            // เรียงแบบตัวอักษร
-            return direction === 'asc' 
-                ? aVal.localeCompare(bVal, 'th') 
-                : bVal.localeCompare(aVal, 'th');
+            return direction === 'asc' ? aVal.localeCompare(bVal, 'th') : bVal.localeCompare(aVal, 'th');
         }
     });
 
-    // ใส่แถวที่เรียงแล้วกลับเข้าไปใหม่
     rows.forEach(row => tbody.appendChild(row));
+    // ต้องเรียก filterTable อีกครั้งเพื่อให้ Limit ทำงานถูกต้องหลัง Sort
+    filterTable();
 }
 
-// ฟังก์ชันเปลี่ยนไอคอน Sort
 function updateSortIcons(columnIndex, direction) {
-    // รีเซ็ตทุกไอคอนเป็นค่าเริ่มต้น (ลูกศรจางๆ)
     const headers = document.querySelectorAll("#mainTable thead th i");
     headers.forEach(icon => {
         icon.className = "fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white opacity-50";
     });
-
-    // เปลี่ยนไอคอนคอลัมน์ที่เลือกให้ชัดเจน
     const activeHeader = document.querySelectorAll("#mainTable thead th")[columnIndex];
     const activeIcon = activeHeader.querySelector("i");
-    activeIcon.className = direction === 'asc' 
-        ? "fa-solid fa-sort-up text-white ml-1" 
-        : "fa-solid fa-sort-down text-white ml-1";
+    activeIcon.className = direction === 'asc' ? "fa-solid fa-sort-up text-white ml-1" : "fa-solid fa-sort-down text-white ml-1";
     activeIcon.style.opacity = "1";
 }
 
-// === 🚀 Logic Filter Table ===
+// === 🚀 Filter Table (Updated for Limit) ===
 function filterTable() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
     const selectedCategory = document.getElementById('categoryFilter').value;
     const selectedStatus = document.getElementById('statusFilter').value;
+    
+    // ✅ 1. ดึงค่า Limit มา
+    const selectedLimit = document.getElementById('limitFilter').value;
+    const limit = selectedLimit === 'all' ? Infinity : parseInt(selectedLimit);
 
     const tableBody = document.getElementById('tableBody');
     const rows = tableBody.querySelectorAll('tr.table-row'); 
-    let visibleCount = 0;
+    
+    let matchCount = 0;   // จำนวนที่ตรงเงื่อนไข (ค้นหา/หมวด/สถานะ)
+    let visibleCount = 0; // จำนวนที่แสดงผลจริง (ไม่เกิน Limit)
 
     rows.forEach(row => {
         const textContent = row.innerText.toLowerCase();
@@ -88,31 +76,39 @@ function filterTable() {
         const matchStatus = selectedStatus === "" || rowStatus === selectedStatus;
 
         if (matchSearch && matchCategory && matchStatus) {
-            row.classList.remove('hidden');
-            visibleCount++;
+            matchCount++;
+            // ✅ 2. เช็คว่าแสดงครบตาม Limit หรือยัง
+            if (visibleCount < limit) {
+                row.classList.remove('hidden');
+                visibleCount++;
+            } else {
+                row.classList.add('hidden'); // ซ่อนส่วนเกิน
+            }
         } else {
             row.classList.add('hidden');
         }
     });
 
+    // จัดการหน้า No Results
     const noResultsRow = document.getElementById('noResultsRow');
     const noDataRow = document.getElementById('noDataRow');
-    
     if(noDataRow) noDataRow.classList.add('hidden');
 
-    if (visibleCount === 0 && rows.length > 0) {
+    if (matchCount === 0 && rows.length > 0) {
         noResultsRow.classList.remove('hidden');
     } else {
         noResultsRow.classList.add('hidden');
     }
 
+    // ✅ 3. อัปเดต Footer
     const showingCount = document.getElementById('showingCount');
     if(showingCount) {
-        showingCount.textContent = `Displaying ${visibleCount} of ${rows.length} items`;
+        // เช่น "Displaying 100 of 1000 items (Total: 2500)"
+        showingCount.textContent = `Displaying ${visibleCount} of ${matchCount} items (from ${rows.length})`;
     }
 }
 
-// === 🔄 Logic Sync Data ===
+// === 🔄 Sync Data ===
 async function syncData() {
     Swal.fire({
         title: 'กำลัง Sync ข้อมูล...',
@@ -130,7 +126,6 @@ async function syncData() {
                 title: 'Sync เสร็จสิ้น!',
                 text: `ดึงข้อมูลมาทั้งหมด ${data.total_records} รายการ`,
                 icon: 'success',
-                confirmButtonColor: '#2563eb',
                 timer: 2000,
                 timerProgressBar: true
             });
@@ -148,7 +143,7 @@ async function syncData() {
     }
 }
 
-// === 🗑️ Logic Clear Data ===
+// === 🗑️ Clear Data ===
 async function clearData() {
     const result = await Swal.fire({
         title: 'ยืนยันการลบข้อมูล?',
@@ -175,7 +170,6 @@ async function clearData() {
             if (res.ok) {
                 await Swal.fire({
                     title: 'ลบข้อมูลเรียบร้อย!',
-                    text: 'Database ว่างเปล่าแล้ว',
                     icon: 'success',
                     timer: 1500,
                     showConfirmButton: false
@@ -185,7 +179,12 @@ async function clearData() {
                 throw new Error(data.message);
             }
         } catch (err) {
-            Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
+            Swal.fire('Error', err.message, 'error');
         }
     }
 }
+
+// ✅ เรียกใช้งานเมื่อโหลดหน้าเสร็จ เพื่อ Apply Limit เริ่มต้น (100)
+document.addEventListener('DOMContentLoaded', () => {
+    filterTable();
+});

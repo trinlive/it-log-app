@@ -1,0 +1,30 @@
+API helpdesk-service
+
+GET http://10.148.0.51:8092/helpdesks/service/all - งานทั้งหมดของ IT
+GET http://10.148.0.51:8092/helpdesks/service/closed/daily - งาน closed วันนี้ของ IT
+POST http://10.148.0.51:8092/helpdesks/service/list - กรองตามเงื่อนไข (status, date, division_code)
+
+    -H "Content-Type: application/json" \
+    -d '{"status":"closed","division_code":"IT","start_date":"2026-01-15","end_date":"2025-01-15"}’
+
+———————————————————————————————
+
+API empauth-request
+
+GET http://10.148.0.51:8092/empauth/request/all - งานทั้งหมดของ IT
+GET http://10.148.0.51:8092/empauth/request/closed/daily - งาน closed วันนี้ของ IT
+POST http://10.148.0.51:8092/empauth/request/list - กรองตามเงื่อนไข (status, date, division_code)
+
+    -H "Content-Type: application/json" \
+    -d '{"status":"closed","division_code":"IT","start_date":"2026-01-15","end_date":"2025-01-15"}’
+
+———————————————————————————————
+
+API cctv-request
+
+GET http://10.148.0.51:8092/cctv/request/all - งานทั้งหมดของ IT
+GET http://10.148.0.51:8092/cctv/request/closed/daily - งาน closed วันนี้ของ IT
+POST http://10.148.0.51:8092/cctv/request/list - กรองตามเงื่อนไข (status, date, division_code)
+
+    -H "Content-Type: application/json" \
+    -d '{"status":"closed","division_code":"IT","start_date":"2026-01-15","end_date":"2025-01-15"}’

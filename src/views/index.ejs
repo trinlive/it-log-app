@@ -16,14 +16,32 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        /* เพิ่ม Cursor Pointer ให้หัวตาราง */
         th.sortable { cursor: pointer; user-select: none; }
-        th.sortable:hover { background-color: #334155; } /* สีตอนเอาเมาส์ชี้ */
+        th.sortable:hover { background-color: #334155; }
     </style>
 </head>
 <body class="text-slate-800">
 
     <%
+        const statusConfig = {
+            'fix':          { label: 'helpdesk.fix',       order: 1 },
+            'claim':        { label: 'helpdesk.claim',     order: 2 },
+            'closed':       { label: 'helpdesk.closed',    order: 3 },
+            'cancel':       { label: 'helpdesk.cancel',    order: 4 },
+            'เรียบร้อย':    { label: 'permission.success', order: 5 },
+            'ยกเลิก':       { label: 'permission.cancel',  order: 6 }
+        };
+
+        function getStatusLabel(status) {
+            const s = (status || '').trim();
+            return statusConfig[s] ? statusConfig[s].label : s;
+        }
+
+        function getStatusOrder(status) {
+            const s = (status || '').trim();
+            return statusConfig[s] ? statusConfig[s].order : 999;
+        }
+
         function formatDate(dateString) {
             if (!dateString) return '-';
             const d = new Date(dateString);
@@ -64,14 +82,15 @@
             </div>
         </div>
 
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
+            
             <div class="md:col-span-2 relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
                 </div>
                 <input type="text" id="searchInput" onkeyup="filterTable()" 
                     class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out sm:text-sm" 
-                    placeholder="ค้นหา Ticket No, รายละเอียด, หรือชื่อผู้แจ้ง...">
+                    placeholder="ค้นหา Ticket No, รายละเอียด...">
             </div>
 
             <div class="relative">
@@ -80,7 +99,7 @@
                 </div>
                 <select id="categoryFilter" onchange="filterTable()" 
                     class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
-                    <option value="">ทุกหมวดหมู่ (All Categories)</option>
+                    <option value="">ทุกหมวดหมู่ (All)</option>
                     <% 
                         const uniqueCats = [...new Set(logs.map(item => (item.category || '').trim()))].filter(Boolean).sort();
                         uniqueCats.forEach(cat => { 
@@ -99,18 +118,36 @@
                 </div>
                 <select id="statusFilter" onchange="filterTable()" 
                     class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
-                    <option value="">สถานะทั้งหมด (All Status)</option>
+                    <option value="">สถานะทั้งหมด (All)</option>
                     <% 
-                        const uniqueStatus = [...new Set(logs.map(item => (item.status || '').trim()))].filter(Boolean).sort();
+                        let uniqueStatus = [...new Set(logs.map(item => (item.status || '').trim()))].filter(Boolean);
+                        uniqueStatus.sort((a, b) => getStatusOrder(a) - getStatusOrder(b));
                         uniqueStatus.forEach(st => { 
                     %>
-                        <option value="<%= st %>"><%= st %></option>
+                        <option value="<%= st %>"><%= getStatusLabel(st) %></option>
                     <% }); %>
                 </select>
                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                     <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
                 </div>
             </div>
+
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-list-ol text-slate-400"></i>
+                </div>
+                <select id="limitFilter" onchange="filterTable()" 
+                    class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
+                    <option value="100" selected>แสดง 100</option>
+                    <option value="500">แสดง 500</option>
+                    <option value="1000">แสดง 1000</option>
+                    <option value="all">แสดงทั้งหมด</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+                </div>
+            </div>
+
         </div>
 
         <div class="bg-white shadow-lg rounded-xl overflow-hidden border border-slate-200">
@@ -125,13 +162,13 @@
                                 Category <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
                             </th>
                             <th onclick="sortTable(2)" class="sortable px-6 py-4 font-semibold tracking-wider min-w-[300px] group">
-                                Details <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                                Details & Solution <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
                             </th>
                             <th onclick="sortTable(3, 'number')" class="sortable px-6 py-4 font-semibold tracking-wider text-right w-24 group">
                                 Cost <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
                             </th>
                             <th onclick="sortTable(4)" class="sortable px-6 py-4 font-semibold tracking-wider w-56 group">
-                                Reporter <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                                Reporter / Assigned <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
                             </th>
                             <th onclick="sortTable(5, 'date')" class="sortable px-6 py-4 font-semibold tracking-wider text-right w-48 group">
                                 Status & Dates <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
@@ -187,6 +224,7 @@
                                                 </span>
                                             <% } %>
                                         </div>
+                                        
                                         <div class="flex items-center gap-2" title="ผู้รับผิดชอบ">
                                             <div class="text-xs text-blue-600">
                                                 <i class="fa-solid fa-user-gear mr-1"></i> <%= log.responsible_person || '-' %>
@@ -202,15 +240,22 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-right" data-sort="<%= log.created_date %>">
                                         <div class="flex flex-col items-end gap-2">
                                             <div>
-                                                <% if (log.status === 'closed' || log.status === 'เสร็จสิ้น') { %>
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                                        <i class="fa-solid fa-check mr-1.5 text-[10px]"></i> <%= log.status %>
-                                                    </span>
-                                                <% } else { %>
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                                                        <i class="fa-solid fa-clock mr-1.5 text-[10px]"></i> <%= log.status %>
-                                                    </span>
-                                                <% } %>
+                                                <% 
+                                                    let badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
+                                                    let iconClass = "fa-clock";
+                                                    
+                                                    if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(log.status)) { 
+                                                        badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
+                                                        iconClass = "fa-check";
+                                                    } else if (['cancelled', 'ยกเลิก', 'cancel'].includes(log.status)) {
+                                                        badgeClass = "bg-red-100 text-red-800 border-red-200";
+                                                        iconClass = "fa-ban";
+                                                    }
+                                                %>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border <%= badgeClass %>">
+                                                    <i class="fa-solid <%= iconClass %> mr-1.5 text-[10px]"></i> 
+                                                    <%= getStatusLabel(log.status) %>
+                                                </span>
                                             </div>
 
                                             <div class="flex flex-col gap-0.5">
@@ -229,7 +274,6 @@
                                             </div>
                                         </div>
                                     </td>
-
                                 </tr>
                             <% }); %>
                         <% } else { %>
@@ -250,14 +294,13 @@
                                 <p>ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</p>
                             </td>
                         </tr>
-
                     </tbody>
                 </table>
             </div>
             
             <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
-                <span id="showingCount">Displaying all <%= logs.length %> items</span>
-                <span class="font-mono opacity-50">v1.3.0 By IT Dev</span>
+                <span id="showingCount">Loading...</span>
+                <span class="font-mono opacity-50">v1.7.0 By IT Dev</span>
             </div>
         </div>
     </div>

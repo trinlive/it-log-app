@@ -1,0 +1,168 @@
+<div class="bg-white shadow-lg rounded-xl overflow-hidden border border-slate-200">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left" id="mainTable">
+            <thead class="bg-slate-800 text-white uppercase text-xs sticky top-0">
+                <tr>
+                    <th onclick="sortTable(0)" class="sortable px-6 py-4 font-semibold tracking-wider w-32 group">
+                        Ticket No. <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                    </th>
+                    <th onclick="sortTable(1)" class="sortable px-6 py-4 font-semibold tracking-wider w-32 group">
+                        Category <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                    </th>
+                    <th onclick="sortTable(2)" class="sortable px-6 py-4 font-semibold tracking-wider min-w-[300px] group">
+                        Details & Solution <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                    </th>
+                    <th onclick="sortTable(3, 'number')" class="sortable px-6 py-4 font-semibold tracking-wider text-right w-24 group">
+                        Cost <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                    </th>
+                    <th onclick="sortTable(4)" class="sortable px-6 py-4 font-semibold tracking-wider w-56 group">
+                        Reporter / Assigned <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                    </th>
+                    <th onclick="sortTable(5, 'date')" class="sortable px-6 py-4 font-semibold tracking-wider text-right w-48 group">
+                        Status & Dates <i class="fa-solid fa-sort text-slate-500 ml-1 group-hover:text-white"></i>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-white" id="tableBody">
+                <% if (logs.length > 0) { %>
+                    <% logs.forEach(function(log, index) { %>
+                        <tr class="hover:bg-blue-50 transition-colors duration-150 group table-row" 
+                            data-filter-category="<%= (log.category || '').trim() %>" 
+                            data-filter-status="<%= (log.status || '').trim() %>">
+                            
+                            <td class="px-6 py-4 whitespace-nowrap" data-sort="<%= log.ticket_no %>">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-ticket text-slate-300 group-hover:text-blue-500 transition-colors"></i>
+                                    <span class="font-bold text-blue-600 font-mono text-base"><%= log.ticket_no %></span>
+                                </div>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap" data-sort="<%= log.category %>">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-semibold border border-slate-200">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                    <%= getCategoryLabel(log.category) %>
+                                </span>
+                            </td>
+
+                            <td class="px-6 py-4 text-slate-600 leading-relaxed text-sm" data-sort="<%= log.details %>">
+                                <div class="mb-1 font-medium text-slate-800">อาการ:</div>
+                                <div class="line-clamp-2 hover:line-clamp-none transition-all duration-300 mb-2">
+                                    <%= log.details %>
+                                </div>
+                                <% if(log.solution) { %>
+                                    <% 
+                                        let solutionIcon = "fa-screwdriver-wrench"; 
+                                        let solutionBg = "bg-green-50 border-green-100 text-green-700";
+
+                                        if (log.ticket_no.startsWith('ERQ')) {
+                                            solutionIcon = "fa-user-check";
+                                            solutionBg = "bg-purple-50 border-purple-100 text-purple-700";
+                                        }
+                                        else if (log.ticket_no.startsWith('CTR') || log.ticket_no.startsWith('CPR')) {
+                                            solutionIcon = "fa-video";
+                                            solutionBg = "bg-blue-50 border-blue-100 text-blue-700";
+                                        }
+                                    %>
+                                    <div class="text-xs <%= solutionBg %> p-2 rounded border">
+                                        <i class="fa-solid <%= solutionIcon %> mr-1"></i> 
+                                        <%= log.solution %>
+                                    </div>
+                                <% } %>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap text-right font-mono text-slate-700" data-sort="<%= log.cost || 0 %>">
+                                <%= parseFloat(log.cost || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 }) %>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap" data-sort="<%= log.reporter_name %>">
+                                <div class="flex items-center gap-2 mb-2" title="ผู้แจ้ง">
+                                    <div class="font-medium text-slate-900 text-xs">
+                                        <i class="fa-regular fa-user mr-1 text-slate-400"></i> <%= log.reporter_name %>
+                                    </div>
+                                    <% if(log.reporter_dept) { %>
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 border border-gray-200 font-mono">
+                                            <%= log.reporter_dept %>
+                                        </span>
+                                    <% } %>
+                                </div>
+                                <div class="flex items-center gap-2" title="ผู้รับผิดชอบ">
+                                    <div class="text-xs text-blue-600">
+                                        <i class="fa-solid fa-user-gear mr-1"></i> <%= log.responsible_person || '-' %>
+                                    </div>
+                                    <% if(log.responsible_dept) { %>
+                                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 font-mono">
+                                            <%= log.responsible_dept %>
+                                        </span>
+                                    <% } %>
+                                </div>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap text-right" data-sort="<%= log.created_date %>">
+                                <div class="flex flex-col items-end gap-2">
+                                    <div>
+                                        <% 
+                                            let badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
+                                            let iconClass = "fa-clock";
+                                            
+                                            if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(log.status)) { 
+                                                badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
+                                                iconClass = "fa-check";
+                                            } else if (['cancelled', 'ยกเลิก', 'cancel'].includes(log.status)) {
+                                                badgeClass = "bg-red-100 text-red-800 border-red-200";
+                                                iconClass = "fa-ban";
+                                            } else if (['รอเจ้าหน้าที่ IT ดำเนินการ'].includes(log.status)) {
+                                                badgeClass = "bg-blue-100 text-blue-800 border-blue-200";
+                                                iconClass = "fa-spinner";
+                                            }
+                                        %>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border <%= badgeClass %>">
+                                            <i class="fa-solid <%= iconClass %> mr-1.5 text-[10px]"></i> 
+                                            <%= getStatusLabel(log.status) %>
+                                        </span>
+                                    </div>
+
+                                    <div class="flex flex-col gap-0.5">
+                                        <div class="text-xs text-slate-500">
+                                            <span class="text-[10px] text-slate-400 mr-1">รับ:</span>
+                                            <span class="font-mono text-slate-600">
+                                                <%= formatDate(log.created_date) %>
+                                            </span>
+                                        </div>
+                                        <div class="text-xs text-slate-500">
+                                            <span class="text-[10px] text-green-600 mr-1">ปิด:</span>
+                                            <span class="font-mono text-slate-600">
+                                                <%= formatDate(log.finished_date) %>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    <% }); %>
+                <% } else { %>
+                    <tr id="noDataRow">
+                        <td colspan="6" class="px-6 py-16 text-center">
+                            <div class="flex flex-col items-center justify-center text-slate-300">
+                                <i class="fa-regular fa-folder-open text-6xl mb-4"></i>
+                                <p class="text-lg text-slate-500 font-medium">ไม่พบข้อมูลในระบบ</p>
+                                <p class="text-sm text-slate-400">ลองกดปุ่ม Sync Data เพื่อดึงข้อมูลล่าสุด</p>
+                            </div>
+                        </td>
+                    </tr>
+                <% } %>
+                
+                <tr id="noResultsRow" class="hidden">
+                    <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                        <i class="fa-solid fa-filter-circle-xmark text-4xl mb-3"></i>
+                        <p>ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+        <span id="showingCount">Loading...</span>
+        <span class="font-mono opacity-50">v1.9.0 By IT Dev</span>
+    </div>
+</div>

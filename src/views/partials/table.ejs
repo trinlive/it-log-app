@@ -28,7 +28,8 @@
                     <% logs.forEach(function(log, index) { %>
                         <tr class="hover:bg-blue-50 transition-colors duration-150 group table-row" 
                             data-filter-category="<%= (log.category || '').trim() %>" 
-                            data-filter-status="<%= (log.status || '').trim() %>">
+                            data-filter-status="<%= (log.status || '').trim() %>"
+                            data-created-date="<%= log.created_date %>">
                             
                             <td class="px-6 py-4 whitespace-nowrap" data-sort="<%= log.ticket_no %>">
                                 <div class="flex items-center gap-2">

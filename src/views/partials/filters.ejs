@@ -1,68 +1,93 @@
-<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
+<div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
     
-    <div class="md:col-span-2 relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+    <div class="flex flex-col lg:flex-row gap-3 lg:items-center">
+        
+        <div class="relative flex-grow min-w-[200px]">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
+            </div>
+            <input type="text" id="searchInput" onkeyup="filterTable()" 
+                class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out sm:text-sm" 
+                placeholder="ค้นหา Ticket, รายละเอียด...">
         </div>
-        <input type="text" id="searchInput" onkeyup="filterTable()" 
-            class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out sm:text-sm" 
-            placeholder="ค้นหา Ticket No, รายละเอียด, หรือชื่อผู้แจ้ง...">
-    </div>
 
-    <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <i class="fa-solid fa-layer-group text-slate-400"></i>
-        </div>
-        <select id="categoryFilter" onchange="filterTable()" 
-            class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
-            <option value="">ทุกหมวดหมู่ (All)</option>
-            <% 
-                let uniqueCats = [...new Set(logs.map(item => (item.category || '').trim()))].filter(Boolean);
-                uniqueCats.sort((a, b) => getCategoryOrder(a) - getCategoryOrder(b));
-                uniqueCats.forEach(cat => { 
-            %>
-                <option value="<%= cat %>"><%= getCategoryLabel(cat) %></option>
-            <% }); %>
-        </select>
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
-        </div>
-    </div>
+        <div class="flex gap-2 flex-col sm:flex-row lg:w-auto">
+            <div class="relative w-full sm:w-auto">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-regular fa-calendar-days text-slate-400"></i>
+                </div>
+                <input type="date" id="startDateFilter" onchange="filterTable()" 
+                    class="block w-full sm:w-36 pl-9 pr-2 py-2 border border-slate-300 rounded-lg leading-5 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm cursor-pointer"
+                    title="วันที่เริ่มต้น">
+            </div>
 
-    <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <i class="fa-solid fa-list-check text-slate-400"></i>
+            <div class="relative w-full sm:w-auto">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-regular fa-calendar-check text-slate-400"></i>
+                </div>
+                <input type="date" id="endDateFilter" onchange="filterTable()" 
+                    class="block w-full sm:w-36 pl-9 pr-2 py-2 border border-slate-300 rounded-lg leading-5 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm cursor-pointer"
+                    title="ถึงวันที่">
+            </div>
         </div>
-        <select id="statusFilter" onchange="filterTable()" 
-            class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
-            <option value="">สถานะทั้งหมด (All)</option>
-            <% 
-                let uniqueStatus = [...new Set(logs.map(item => (item.status || '').trim()))].filter(Boolean);
-                uniqueStatus.sort((a, b) => getStatusOrder(a) - getStatusOrder(b));
-                uniqueStatus.forEach(st => { 
-            %>
-                <option value="<%= st %>"><%= getStatusLabel(st) %></option>
-            <% }); %>
-        </select>
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
-        </div>
-    </div>
 
-    <div class="relative">
-        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <i class="fa-solid fa-list-ol text-slate-400"></i>
+        <div class="relative lg:w-48">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fa-solid fa-layer-group text-slate-400"></i>
+            </div>
+            <select id="categoryFilter" onchange="filterTable()" 
+                class="block w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm appearance-none cursor-pointer text-slate-600 font-medium">
+                <option value="">ทุกหมวดหมู่</option>
+                <% 
+                    let uniqueCats = [...new Set(logs.map(item => (item.category || '').trim()))].filter(Boolean);
+                    uniqueCats.sort((a, b) => getCategoryOrder(a) - getCategoryOrder(b));
+                    uniqueCats.forEach(cat => { 
+                %>
+                    <option value="<%= cat %>"><%= getCategoryLabel(cat) %></option>
+                <% }); %>
+            </select>
+            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+            </div>
         </div>
-        <select id="limitFilter" onchange="filterTable()" 
-            class="block w-full pl-10 pr-10 py-2.5 border border-slate-300 rounded-lg leading-5 bg-slate-50 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm appearance-none cursor-pointer">
-            <option value="100" selected>แสดง 100</option>
-            <option value="500">แสดง 500</option>
-            <option value="1000">แสดง 1000</option>
-            <option value="all">แสดงทั้งหมด</option>
-        </select>
-        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
-        </div>
-    </div>
 
+        <div class="relative lg:w-40">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fa-solid fa-list-check text-slate-400"></i>
+            </div>
+            <select id="statusFilter" onchange="filterTable()" 
+                class="block w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm appearance-none cursor-pointer text-slate-600 font-medium">
+                <option value="">ทุกสถานะ</option>
+                <% 
+                    let uniqueStatus = [...new Set(logs.map(item => (item.status || '').trim()))].filter(Boolean);
+                    uniqueStatus.sort((a, b) => getStatusOrder(a) - getStatusOrder(b));
+                    uniqueStatus.forEach(st => { 
+                %>
+                    <option value="<%= st %>"><%= getStatusLabel(st) %></option>
+                <% }); %>
+            </select>
+            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2 border border-slate-200 shrink-0">
+            <span class="text-xs text-slate-500 font-medium whitespace-nowrap">
+                <i class="fa-solid fa-list-ol"></i>
+            </span>
+            <div class="relative">
+                <select id="limitFilter" onchange="filterTable()" 
+                    class="bg-transparent text-sm font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none pr-3 w-16 text-center">
+                    <option value="100" selected>100</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                    <option value="all">All</option>
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-caret-down text-slate-400 text-[10px]"></i>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>

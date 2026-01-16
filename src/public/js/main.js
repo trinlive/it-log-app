@@ -50,46 +50,69 @@ function updateSortIcons(columnIndex, direction) {
     activeIcon.style.opacity = "1";
 }
 
-// === 🚀 Filter Table (Updated for Limit) ===
+// === 🚀 Filter Table (Updated) ===
 function filterTable() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
     const selectedCategory = document.getElementById('categoryFilter').value;
     const selectedStatus = document.getElementById('statusFilter').value;
     
-    // ✅ 1. ดึงค่า Limit มา
+    // ✅ 1. ดึงค่าวันที่
+    const startDateVal = document.getElementById('startDateFilter').value;
+    const endDateVal = document.getElementById('endDateFilter').value;
+
+    // แปลงเป็น Date Object (set เวลาเป็น 00:00:00 เพื่อเทียบแค่วันที่)
+    const startDate = startDateVal ? new Date(startDateVal) : null;
+    if(startDate) startDate.setHours(0,0,0,0);
+
+    const endDate = endDateVal ? new Date(endDateVal) : null;
+    if(endDate) endDate.setHours(23,59,59,999); // ให้ครอบคลุมถึงสิ้นวัน
+
     const selectedLimit = document.getElementById('limitFilter').value;
     const limit = selectedLimit === 'all' ? Infinity : parseInt(selectedLimit);
 
     const tableBody = document.getElementById('tableBody');
     const rows = tableBody.querySelectorAll('tr.table-row'); 
     
-    let matchCount = 0;   // จำนวนที่ตรงเงื่อนไข (ค้นหา/หมวด/สถานะ)
-    let visibleCount = 0; // จำนวนที่แสดงผลจริง (ไม่เกิน Limit)
+    let matchCount = 0;
+    let visibleCount = 0;
 
     rows.forEach(row => {
         const textContent = row.innerText.toLowerCase();
         const rowCategory = row.getAttribute('data-filter-category'); 
         const rowStatus = row.getAttribute('data-filter-status');
+        
+        // ✅ 2. ดึงวันที่ของแถวนั้นๆ
+        const rowDateStr = row.getAttribute('data-created-date');
+        const rowDate = rowDateStr ? new Date(rowDateStr) : null;
 
+        // เงื่อนไขเดิม
         const matchSearch = textContent.includes(searchText);
         const matchCategory = selectedCategory === "" || rowCategory === selectedCategory;
         const matchStatus = selectedStatus === "" || rowStatus === selectedStatus;
 
-        if (matchSearch && matchCategory && matchStatus) {
+        // ✅ 3. เงื่อนไขวันที่
+        let matchDate = true;
+        if (rowDate) {
+            // ถ้าเลือกวันเริ่มต้น -> rowDate ต้องมากกว่าหรือเท่ากับ startDate
+            if (startDate && rowDate < startDate) matchDate = false;
+            // ถ้าเลือกวันสิ้นสุด -> rowDate ต้องน้อยกว่าหรือเท่ากับ endDate
+            if (endDate && rowDate > endDate) matchDate = false;
+        }
+
+        if (matchSearch && matchCategory && matchStatus && matchDate) {
             matchCount++;
-            // ✅ 2. เช็คว่าแสดงครบตาม Limit หรือยัง
             if (visibleCount < limit) {
                 row.classList.remove('hidden');
                 visibleCount++;
             } else {
-                row.classList.add('hidden'); // ซ่อนส่วนเกิน
+                row.classList.add('hidden');
             }
         } else {
             row.classList.add('hidden');
         }
     });
 
-    // จัดการหน้า No Results
+    // ... (ส่วนจัดการ No Results และ Footer เหมือนเดิม) ...
     const noResultsRow = document.getElementById('noResultsRow');
     const noDataRow = document.getElementById('noDataRow');
     if(noDataRow) noDataRow.classList.add('hidden');
@@ -100,10 +123,8 @@ function filterTable() {
         noResultsRow.classList.add('hidden');
     }
 
-    // ✅ 3. อัปเดต Footer
     const showingCount = document.getElementById('showingCount');
     if(showingCount) {
-        // เช่น "Displaying 100 of 1000 items (Total: 2500)"
         showingCount.textContent = `Displaying ${visibleCount} of ${matchCount} items (from ${rows.length})`;
     }
 }

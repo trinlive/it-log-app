@@ -106,7 +106,9 @@ const categoryConfig = {
     'CCTV': { label: 'cctv.cctv', order: 26 },
     'ขอดูย้อนหลัง': { label: 'cctv.playback', order: 27 },
     'ขอติดตั้ง': { label: 'cctv.install', order: 28 },
-    'ขอย้ายจุดติดตั้ง': { label: 'cctv.move', order: 29 }
+    'ขอย้ายจุดติดตั้ง': { label: 'cctv.move', order: 29 },
+    // Meeting
+    'Meeting': { label: 'Meeting Room', order: 30 }
 };
 
 // Attach Helpers to app.locals

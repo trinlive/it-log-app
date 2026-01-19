@@ -93,14 +93,5 @@ sequenceDiagram
     deactivate Server
 ```
 
-## 🚀 Getting Started
 
-1. **Environment Setup:**
-   Copy `.env.example` to `.env` and configure:
-   - `DB_PASS`, `SESSION_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-
-2. **Run with Docker:**
-   ```bash
-   docker-compose up -d --build
-   ```
 

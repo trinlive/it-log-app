@@ -39,6 +39,15 @@ services:
       - app-network
     restart: always
 
+  # ✅ ส่วนที่เพิ่ม: Cloudflare Tunnel
+  tunnel:
+    container_name: cloudflared-tunnel
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel --no-autoupdate run --token eyJhIjoiYzNhMTI1MDJkNTQ1MmQzOGI1NmUzODVhZDdhZGYyOGMiLCJ0IjoiZGI3ODRiZDYtMDFlYi00ZWQ5LTg2MTUtNmEwNDA4M2YwNGNmIiwicyI6Ik1tUmlOVFpoT1dNdE1qQmxNaTAwWmpRM0xXSTJPV0l0TWpKalpETTJaakU0WTJGbSJ9
+    networks:
+      - app-network
+
 networks:
   app-network:
 

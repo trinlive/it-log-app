@@ -4,6 +4,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 // ✅ รายชื่อคนที่มีสิทธิ์เข้าใช้งาน
 const ALLOWED_USERS = [
     'trinyah@bicchemical.com',
+    'trinyah@jbf.co.th',
     'teerayut@jbf.co.th',
     'pakon@jbf.co.th',
     'napat@bicchemical.com',

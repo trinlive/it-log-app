@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # 1. ส่วนของ App Node.js
   app:
     container_name: it-log-app
     build: .
@@ -9,27 +8,33 @@ services:
       - "38000:3000"
     environment:
       - PORT=3000
-      - DB_HOST=db             # สำคัญ: ใน Docker ต้องเรียกชื่อ Service ว่า "db" ห้ามใช้ localhost
+      - DB_HOST=db
       - DB_USER=root
-      - DB_PASS=gUm9LCWcag     # รหัสผ่านตามที่คุณระบุ
+      - DB_PASS=gUm9LCWcag
       - DB_NAME=itlogs
-      - TZ=Asia/Bangkok        # ตั้งเวลาเครื่องเป็นไทย
+      - TZ=Asia/Bangkok
+      
+      # ✅ เรียกใช้ค่าจาก .env แทนการใส่รหัสตรงๆ
+      - SESSION_SECRET=${SESSION_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+
     depends_on:
-      - db                     # รอให้ Database ตื่นก่อนค่อยรัน App
+      - db
     networks:
       - app-network
     restart: always
 
-  # 2. ส่วนของ Database (MariaDB)
   db:
-    image: mariadb:10.6        # ใช้ version เสถียร
+    image: mariadb:10.6
     container_name: it-log-db
     environment:
-      - MYSQL_ROOT_PASSWORD=gUm9LCWcag  # ต้องตรงกับ DB_PASS ข้างบน
-      - MYSQL_DATABASE=itlogs           # สร้าง Database ชื่อนี้ให้อัตโนมัติ
-      - TZ=Asia/Bangkok                 # ตั้งเวลา Database เป็นไทย
+      - MYSQL_ROOT_PASSWORD=gUm9LCWcag
+      - MYSQL_DATABASE=itlogs
+      - TZ=Asia/Bangkok
     volumes:
-      - db_data:/var/lib/mysql          # เก็บข้อมูลถาวร (Volume)
+      - db_data:/var/lib/mysql
     networks:
       - app-network
     restart: always

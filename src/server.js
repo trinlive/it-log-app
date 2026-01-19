@@ -1,28 +1,63 @@
 const express = require('express');
 const path = require('path');
+const session = require('express-session');
+const passport = require('passport');
 const db = require('./config/database');
 const OldLog = require('./models/OldLog');
-const app = express();
 const syncController = require('./controllers/syncController');
 const cron = require('node-cron');
 
+// เรียกใช้ Config Passport
+require('./config/passport');
+
+const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// ==========================================
+// 1. App Setup & Middleware
+// ==========================================
+
+app.set('trust proxy', 1); // รองรับ Reverse Proxy/Docker
+
+// Middleware พื้นฐาน
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Session Setup
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'it_helpdesk_secret_key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 1 วัน
+}));
+
+// Passport Setup
+app.use(passport.initialize());
+app.use(passport.session());
 
 // View Engine
 app.set('view engine', 'ejs');
 app.set('views', './src/views');
 
+// Global Middleware: ส่งข้อมูล User ไปทุกหน้า View
+app.use((req, res, next) => {
+    res.locals.currentUser = req.user || null;
+    next();
+});
+
+// Helper Middleware: ฟังก์ชันป้องกัน Route (ต้อง Login ก่อน)
+const ensureAuthenticated = (req, res, next) => {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    res.redirect('/login');
+};
+
 // ==========================================
-// ✅ Global Configs & Helpers for Views
-// (ย้ายมาจาก partials/config.ejs)
+// 2. Global Configs & Helpers (สำหรับ Views)
 // ==========================================
 
-// 1. Config Data
 const statusConfig = {
     'fix': { label: 'helpdesk.fix', order: 1 },
     'claim': { label: 'helpdesk.claim', order: 2 },
@@ -74,27 +109,11 @@ const categoryConfig = {
     'ขอย้ายจุดติดตั้ง': { label: 'cctv.move', order: 29 }
 };
 
-// 2. Attach Helpers to app.locals (Available in all views)
-app.locals.getStatusLabel = (status) => {
-    const s = (status || '').trim();
-    return statusConfig[s] ? statusConfig[s].label : s;
-};
-
-app.locals.getStatusOrder = (status) => {
-    const s = (status || '').trim();
-    return statusConfig[s] ? statusConfig[s].order : 999;
-};
-
-app.locals.getCategoryLabel = (cat) => {
-    const c = (cat || '').trim();
-    return categoryConfig[c] ? categoryConfig[c].label : c;
-};
-
-app.locals.getCategoryOrder = (cat) => {
-    const c = (cat || '').trim();
-    return categoryConfig[c] ? categoryConfig[c].order : 999;
-};
-
+// Attach Helpers to app.locals
+app.locals.getStatusLabel = (status) => statusConfig[(status || '').trim()]?.label || status;
+app.locals.getStatusOrder = (status) => statusConfig[(status || '').trim()]?.order || 999;
+app.locals.getCategoryLabel = (cat) => categoryConfig[(cat || '').trim()]?.label || cat;
+app.locals.getCategoryOrder = (cat) => categoryConfig[(cat || '').trim()]?.order || 999;
 app.locals.formatDate = (dateString) => {
     if (!dateString) return '-';
     const d = new Date(dateString);
@@ -107,14 +126,36 @@ app.locals.formatDate = (dateString) => {
 };
 
 // ==========================================
+// 3. Routes
+// ==========================================
 
-// --- Routes ---
+// --- Auth Routes ---
+app.get('/login', (req, res) => {
+    if (req.isAuthenticated()) return res.redirect('/');
+    res.render('login');
+});
 
-// 1. Sync Data
-app.get('/api/sync', syncController.syncAllData);
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-// 2. Clear Data
-app.post('/api/clear', async (req, res) => {
+app.get('/auth/google/callback', 
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    (req, res) => res.redirect('/')
+);
+
+app.get('/logout', (req, res, next) => {
+    req.logout((err) => {
+        if (err) return next(err);
+        res.redirect('/login');
+    });
+});
+
+// --- Main Routes (Protected) ---
+
+// 1. Sync Data (Protect)
+app.get('/api/sync', ensureAuthenticated, syncController.syncAllData);
+
+// 2. Clear Data (Protect)
+app.post('/api/clear', ensureAuthenticated, async (req, res) => {
     try {
         await OldLog.destroy({ where: {}, truncate: true });
         res.json({ success: true, message: 'All data cleared successfully' });
@@ -124,11 +165,11 @@ app.post('/api/clear', async (req, res) => {
     }
 });
 
-// 3. Home Dashboard
-app.get('/', async (req, res) => {
+// 3. Home Dashboard (Protect)
+app.get('/', ensureAuthenticated, async (req, res) => {
     try {
         const logs = await OldLog.findAll({
-            limit: 1000,
+            limit: 1000, 
             order: [['created_date', 'DESC']]
         });
         res.render('index', { logs: logs });
@@ -143,7 +184,11 @@ app.get('/', async (req, res) => {
     }
 });
 
-// --- Scheduled Tasks ---
+// ==========================================
+// 4. Server Start & Scheduled Tasks
+// ==========================================
+
+// Cron Job
 cron.schedule('0 08 * * *', () => {
     console.log('⏰ Running Scheduled Sync...');
     if (syncController.runScheduledSync) {
@@ -151,7 +196,7 @@ cron.schedule('0 08 * * *', () => {
     }
 });
 
-// --- Start Server ---
+// Start Server
 const startServer = async () => {
     try {
         await db.authenticate();

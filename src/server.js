@@ -7,7 +7,7 @@ const OldLog = require('./models/OldLog');
 const syncController = require('./controllers/syncController');
 const cron = require('node-cron');
 
-// เรียกใช้ Config Passport
+// เรียกใช้ Config Passport (สำคัญ: ต้องเรียกก่อนเริ่ม App เพื่อให้ passport.allowedUsers ใช้งานได้)
 require('./config/passport');
 
 const app = express();
@@ -130,11 +130,16 @@ app.locals.formatDate = (dateString) => {
 // ==========================================
 
 // --- Auth Routes ---
+
+// 1. หน้า Login (แก้ไข: ส่งรายชื่อ Dev Users ไปด้วย)
 app.get('/login', (req, res) => {
     if (req.isAuthenticated()) return res.redirect('/');
-    res.render('login');
+    res.render('login', { 
+        devUsers: passport.allowedUsers || [] 
+    });
 });
 
+// 2. Google Login
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback', 
@@ -142,10 +147,30 @@ app.get('/auth/google/callback',
     (req, res) => res.redirect('/')
 );
 
+// 3. Logout
 app.get('/logout', (req, res, next) => {
     req.logout((err) => {
         if (err) return next(err);
         res.redirect('/login');
+    });
+});
+
+// ✅ 4. เพิ่ม Route สำหรับ Dev Login (ทางลัดสำหรับการ Test)
+app.get('/auth/mock/:email', (req, res) => {
+    const email = req.params.email;
+    
+    // สร้าง User จำลอง
+    const user = {
+        email: email,
+        name: email.split('@')[0], // ใช้ชื่อหน้า @ เป็นชื่อเล่น
+        role: 'staff',
+        photo: null
+    };
+
+    // สั่ง Login ทันที
+    req.login(user, (err) => {
+        if (err) return res.redirect('/login');
+        res.redirect('/');
     });
 });
 

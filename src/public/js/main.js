@@ -1,9 +1,9 @@
 /**
- * main.js
- * จัดการ Logic Filter, Sorting, Sync, Clear
+ * main.js (Updated: Pagination in Top Filter Bar)
  */
 
 let currentSort = { column: -1, direction: 'asc' };
+let currentPage = 1;
 
 // === 🔃 Sort Table ===
 function sortTable(columnIndex, type = 'text') {
@@ -35,6 +35,7 @@ function sortTable(columnIndex, type = 'text') {
     });
 
     rows.forEach(row => tbody.appendChild(row));
+    currentPage = 1;
     filterTable();
 }
 
@@ -49,72 +50,80 @@ function updateSortIcons(columnIndex, direction) {
     activeIcon.style.opacity = "1";
 }
 
-// === 🚀 Filter Table (Updated) ===
-function filterTable() {
+// === 🚀 Filter Table & Pagination Logic ===
+function filterTable(resetPage = false) {
+    if (resetPage) currentPage = 1;
+
     const searchText = document.getElementById('searchInput').value.toLowerCase();
     const selectedCategory = document.getElementById('categoryFilter').value;
     
-    // ❌ เอา selectedStatus ออกแล้ว
-    // const selectedStatus = document.getElementById('statusFilter').value;
-    
-    // ✅ 1. ดึงค่าวันที่
+    // Date Filters
     const startDateVal = document.getElementById('startDateFilter').value;
     const endDateVal = document.getElementById('endDateFilter').value;
-
     const startDate = startDateVal ? new Date(startDateVal) : null;
     if(startDate) startDate.setHours(0,0,0,0);
-
     const endDate = endDateVal ? new Date(endDateVal) : null;
     if(endDate) endDate.setHours(23,59,59,999); 
 
+    // Pagination Settings
     const selectedLimit = document.getElementById('limitFilter').value;
-    const limit = selectedLimit === 'all' ? Infinity : parseInt(selectedLimit);
-
+    const itemsPerPage = selectedLimit === 'all' ? Infinity : parseInt(selectedLimit);
+    
     const tableBody = document.getElementById('tableBody');
     const rows = tableBody.querySelectorAll('tr.table-row'); 
     
-    let matchCount = 0;
-    let visibleCount = 0;
+    // ✅ อัปเดต Total Records (จำนวนทั้งหมดในระบบที่โหลดมา)
+    const totalRecordsDisplay = document.getElementById('totalRecordsDisplay');
+    if(totalRecordsDisplay) {
+        // ใช้ toLocaleString ให้มีลูกน้ำคั่น (เช่น 1,250)
+        totalRecordsDisplay.textContent = rows.length.toLocaleString(); 
+    }
 
+    let matchCount = 0;
+    const matchedRows = [];
+
+    // 1. Filter Logic
     rows.forEach(row => {
         const textContent = row.innerText.toLowerCase();
         const rowCategory = row.getAttribute('data-filter-category'); 
-        
-        // ❌ เอา rowStatus ออกแล้ว
-        // const rowStatus = row.getAttribute('data-filter-status');
-        
         const rowDateStr = row.getAttribute('data-created-date');
         const rowDate = rowDateStr ? new Date(rowDateStr) : null;
 
-        // เงื่อนไขเดิม
         const matchSearch = textContent.includes(searchText);
         const matchCategory = selectedCategory === "" || rowCategory === selectedCategory;
         
-        // ❌ เอา matchStatus ออกแล้ว
-        // const matchStatus = selectedStatus === "" || rowStatus === selectedStatus;
-
-        // ✅ 3. เงื่อนไขวันที่
         let matchDate = true;
         if (rowDate) {
             if (startDate && rowDate < startDate) matchDate = false;
             if (endDate && rowDate > endDate) matchDate = false;
         }
 
-        // ❌ ตัด matchStatus ออกจากเงื่อนไข
         if (matchSearch && matchCategory && matchDate) {
-            matchCount++;
-            if (visibleCount < limit) {
-                row.classList.remove('hidden');
-                visibleCount++;
-            } else {
-                row.classList.add('hidden');
-            }
+            matchedRows.push(row);
         } else {
             row.classList.add('hidden');
         }
     });
 
-    // ... (ส่วนจัดการ No Results และ Footer เหมือนเดิม) ...
+    matchCount = matchedRows.length;
+
+    // 2. Pagination Calculation
+    const totalPages = Math.ceil(matchCount / itemsPerPage) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+
+    // 3. Show/Hide based on page
+    matchedRows.forEach((row, index) => {
+        if (index >= startIndex && index < endIndex) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+
+    // 4. No Results Handling
     const noResultsRow = document.getElementById('noResultsRow');
     const noDataRow = document.getElementById('noDataRow');
     if(noDataRow) noDataRow.classList.add('hidden');
@@ -125,10 +134,45 @@ function filterTable() {
         noResultsRow.classList.add('hidden');
     }
 
-    const showingCount = document.getElementById('showingCount');
-    if(showingCount) {
-        showingCount.textContent = `Displaying ${visibleCount} of ${matchCount} items (from ${rows.length})`;
+    // 5. Render Controls
+    renderPaginationControls(totalPages);
+}
+
+// ✅ วาดปุ่ม Pagination ในตำแหน่งใหม่ (ข้างบน)
+function renderPaginationControls(totalPages) {
+    const paginationContainer = document.getElementById('paginationControls');
+    if (!paginationContainer) return;
+
+    // ถ้ามีหน้าเดียว หรือไม่มีข้อมูล ไม่ต้องโชว์ปุ่มกด
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
     }
+
+    let html = `
+        <div class="flex items-center gap-1 bg-white border border-slate-200 rounded p-0.5">
+            <button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} 
+                class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent text-slate-600 transition-colors">
+                <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            </button>
+            
+            <span class="text-[10px] text-slate-600 font-semibold px-2 min-w-[50px] text-center select-none">
+                ${currentPage} / ${totalPages}
+            </span>
+
+            <button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} 
+                class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent text-slate-600 transition-colors">
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+        </div>
+    `;
+
+    paginationContainer.innerHTML = html;
+}
+
+function changePage(newPage) {
+    currentPage = newPage;
+    filterTable(false);
 }
 
 // === 🔄 Sync Data ===
@@ -208,5 +252,5 @@ async function clearData() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    filterTable();
+    filterTable(true);
 });

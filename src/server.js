@@ -84,6 +84,7 @@ const categoryConfig = {
     'VPN': { label: 'permission.vpn', order: 10 },
     'Vender Support': { label: 'permission.vender', order: 11 },
     'Remote Desktop': { label: 'permission.remoteDesktop', order: 12 },
+    
     // Helpdesk
     'Computer': { label: 'helpdesk.computer', order: 13 },
     'Computers': { label: 'helpdesk.computer', order: 13 },
@@ -102,14 +103,16 @@ const categoryConfig = {
     'UPS': { label: 'helpdesk.ups', order: 23 },
     'Telephone': { label: 'helpdesk.telephone', order: 24 },
     'USB': { label: 'helpdesk.usb', order: 25 },
+
     // CCTV
     'CCTV': { label: 'cctv.cctv', order: 26 },
     'ขอดูย้อนหลัง': { label: 'cctv.playback', order: 27 },
     'ขอติดตั้ง': { label: 'cctv.install', order: 28 },
     'ขอย้ายจุดติดตั้ง': { label: 'cctv.move', order: 29 },
-    // Meeting
+
+    // ✅ Update: Meeting
     'Meeting': { label: 'meeting.service', order: 30 },
-    // Website
+    // ✅ Update: Website
     'Web Site': { label: 'dev.website', order: 31 }
 };
 
@@ -197,8 +200,8 @@ app.post('/api/clear', ensureAuthenticated, async (req, res) => {
 // 3. Home Dashboard (Protect)
 app.get('/', ensureAuthenticated, async (req, res) => {
     try {
+        // ✅ แก้ไข: เอา limit: 1000 ออก เพื่อให้ดึงข้อมูลทั้งหมด
         const logs = await OldLog.findAll({
-            limit: 1000, 
             order: [['created_date', 'DESC']]
         });
         res.render('index', { logs: logs });

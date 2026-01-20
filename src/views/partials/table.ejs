@@ -54,7 +54,6 @@
                                     <% 
                                         let solutionIcon = "fa-screwdriver-wrench"; 
                                         let solutionBg = "bg-green-50 border-green-100 text-green-700";
-
                                         if (log.ticket_no.startsWith('ERQ')) {
                                             solutionIcon = "fa-user-check";
                                             solutionBg = "bg-purple-50 border-purple-100 text-purple-700";
@@ -104,7 +103,6 @@
                                         <% 
                                             let badgeClass = "bg-amber-100 text-amber-800 border-amber-200";
                                             let iconClass = "fa-clock";
-                                            
                                             if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(log.status)) { 
                                                 badgeClass = "bg-emerald-100 text-emerald-800 border-emerald-200";
                                                 iconClass = "fa-check";
@@ -162,8 +160,7 @@
         </table>
     </div>
     
-    <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
-        <span id="showingCount">Loading...</span>
+    <div class="bg-slate-50 px-6 py-2 border-t border-slate-200 text-[10px] text-slate-400 flex justify-end">
         <span class="font-mono opacity-50">v1.9.0 By IT Dev</span>
     </div>
 </div>

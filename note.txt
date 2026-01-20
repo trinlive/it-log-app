@@ -28,3 +28,52 @@ POST http://10.148.0.51:8092/cctv/request/list - กรองตามเงื�
 
     -H "Content-Type: application/json" \
     -d '{"status":"closed","division_code":"IT","start_date":"2026-01-15","end_date":"2025-01-15"}’
+
+
+
+Gemini
+    สถานะทั้่งหมดอยากให้เปลี่ยน lable ข้อความดังนี้ และทำการเรียงลำดับการกรองดังนี้
+    1. fix ==> helpdesk.fix
+    2. claim ==> helpdesk.claim
+    3. closed ==> helpdesk.closed
+    4. cancel ==> helpdesk.cancel
+    5. เรียบร้อย ==> permission.success 
+    6. ยกเลิก ==> permission.cancel
+
+
+
+    ทุกหมวดหมู่ (All) lable ข้อความดังนี้ และทำการเรียงลำดับการกรองดังนี้
+
+    1. ลงทะเบียนพนักงานใหม่ ==> permission.registerUser
+    2. Admin Social Media ==> permission.social
+    3. Drive Center ==> permission.NasDrive
+    4. Email ==> permisssion.email
+    5. Cloud Drive Center (Shared drives) ==> permission.Gdrive
+    6. LINE ==> permission.line
+    7. SSH-KEY ==> permission.ssh
+    8. USB Thumdrive ==> permission.thumbDrive
+    9. WIFI ==> permission.wifi
+    10. VPN ==> permission.vpn
+    11. Vender Support ==> permission.vender
+    12. Remote Desktop ==> permission.remoteDesktop
+ 
+    13. Computer ==> helpdesk.computer
+    14. Internet ==> helpdesk.internet
+    15. Laptops ==> helpdesk.laptop
+    16. Network ==> helpdesk.network
+    17. Other ==> helpdesk.other
+    18. Printers ==> helpdesk.printer
+    19. Recovery Data ==> helpdesk.recoveryData
+    20. SAP ==> helpdesk.sap
+    21. Scaner ==> helpdesk.scaner
+    22. Software ==> helpdesk.software
+    23. UPS ==> helpdesk.ups
+    
+    24. CCTV ==> cctv.cctv
+    25. ขอดูย้อนหลัง ==> cctv.playback
+    26. ขอติดตั้ง ==> cctv.install
+   
+
+   
+
+ 

@@ -51,26 +51,6 @@
             </div>
         </div>
 
-        <div class="relative lg:w-40">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fa-solid fa-list-check text-slate-400"></i>
-            </div>
-            <select id="statusFilter" onchange="filterTable()" 
-                class="block w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm appearance-none cursor-pointer text-slate-600 font-medium">
-                <option value="">ทุกสถานะ</option>
-                <% 
-                    let uniqueStatus = [...new Set(logs.map(item => (item.status || '').trim()))].filter(Boolean);
-                    uniqueStatus.sort((a, b) => getStatusOrder(a) - getStatusOrder(b));
-                    uniqueStatus.forEach(st => { 
-                %>
-                    <option value="<%= st %>"><%= getStatusLabel(st) %></option>
-                <% }); %>
-            </select>
-            <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                <i class="fa-solid fa-chevron-down text-slate-400 text-xs"></i>
-            </div>
-        </div>
-
         <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2 border border-slate-200 shrink-0">
             <span class="text-xs text-slate-500 font-medium whitespace-nowrap">
                 <i class="fa-solid fa-list-ol"></i>
@@ -88,6 +68,18 @@
                 </div>
             </div>
         </div>
+
+        <button onclick="clearData()" 
+            class="bg-white hover:bg-red-50 text-red-500 border border-slate-300 hover:border-red-400 p-2.5 rounded-lg shadow-sm transition-all duration-200 shrink-0"
+            title="ล้างข้อมูลทั้งหมด (Clear Data)">
+            <i class="fa-solid fa-trash-can"></i>
+        </button>
+
+        <button onclick="syncData()" 
+            class="bg-white hover:bg-blue-600 hover:text-white text-slate-500 border border-slate-300 hover:border-blue-600 p-2.5 rounded-lg shadow-sm transition-all duration-200 shrink-0 group"
+            title="ดึงข้อมูลล่าสุด (Sync Data)">
+            <i class="fa-solid fa-rotate group-hover:animate-spin"></i>
+        </button>
 
     </div>
 </div>

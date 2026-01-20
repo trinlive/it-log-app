@@ -35,7 +35,6 @@ function sortTable(columnIndex, type = 'text') {
     });
 
     rows.forEach(row => tbody.appendChild(row));
-    // ต้องเรียก filterTable อีกครั้งเพื่อให้ Limit ทำงานถูกต้องหลัง Sort
     filterTable();
 }
 
@@ -54,18 +53,19 @@ function updateSortIcons(columnIndex, direction) {
 function filterTable() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
     const selectedCategory = document.getElementById('categoryFilter').value;
-    const selectedStatus = document.getElementById('statusFilter').value;
+    
+    // ❌ เอา selectedStatus ออกแล้ว
+    // const selectedStatus = document.getElementById('statusFilter').value;
     
     // ✅ 1. ดึงค่าวันที่
     const startDateVal = document.getElementById('startDateFilter').value;
     const endDateVal = document.getElementById('endDateFilter').value;
 
-    // แปลงเป็น Date Object (set เวลาเป็น 00:00:00 เพื่อเทียบแค่วันที่)
     const startDate = startDateVal ? new Date(startDateVal) : null;
     if(startDate) startDate.setHours(0,0,0,0);
 
     const endDate = endDateVal ? new Date(endDateVal) : null;
-    if(endDate) endDate.setHours(23,59,59,999); // ให้ครอบคลุมถึงสิ้นวัน
+    if(endDate) endDate.setHours(23,59,59,999); 
 
     const selectedLimit = document.getElementById('limitFilter').value;
     const limit = selectedLimit === 'all' ? Infinity : parseInt(selectedLimit);
@@ -79,27 +79,29 @@ function filterTable() {
     rows.forEach(row => {
         const textContent = row.innerText.toLowerCase();
         const rowCategory = row.getAttribute('data-filter-category'); 
-        const rowStatus = row.getAttribute('data-filter-status');
         
-        // ✅ 2. ดึงวันที่ของแถวนั้นๆ
+        // ❌ เอา rowStatus ออกแล้ว
+        // const rowStatus = row.getAttribute('data-filter-status');
+        
         const rowDateStr = row.getAttribute('data-created-date');
         const rowDate = rowDateStr ? new Date(rowDateStr) : null;
 
         // เงื่อนไขเดิม
         const matchSearch = textContent.includes(searchText);
         const matchCategory = selectedCategory === "" || rowCategory === selectedCategory;
-        const matchStatus = selectedStatus === "" || rowStatus === selectedStatus;
+        
+        // ❌ เอา matchStatus ออกแล้ว
+        // const matchStatus = selectedStatus === "" || rowStatus === selectedStatus;
 
         // ✅ 3. เงื่อนไขวันที่
         let matchDate = true;
         if (rowDate) {
-            // ถ้าเลือกวันเริ่มต้น -> rowDate ต้องมากกว่าหรือเท่ากับ startDate
             if (startDate && rowDate < startDate) matchDate = false;
-            // ถ้าเลือกวันสิ้นสุด -> rowDate ต้องน้อยกว่าหรือเท่ากับ endDate
             if (endDate && rowDate > endDate) matchDate = false;
         }
 
-        if (matchSearch && matchCategory && matchStatus && matchDate) {
+        // ❌ ตัด matchStatus ออกจากเงื่อนไข
+        if (matchSearch && matchCategory && matchDate) {
             matchCount++;
             if (visibleCount < limit) {
                 row.classList.remove('hidden');
@@ -205,7 +207,6 @@ async function clearData() {
     }
 }
 
-// ✅ เรียกใช้งานเมื่อโหลดหน้าเสร็จ เพื่อ Apply Limit เริ่มต้น (100)
 document.addEventListener('DOMContentLoaded', () => {
     filterTable();
 });

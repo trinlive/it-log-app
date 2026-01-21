@@ -51,7 +51,7 @@
 
         <div class="bg-white p-4 rounded-lg border border-slate-100 shadow-sm h-fit">
             <h3 class="text-sm font-semibold text-slate-700 mb-4 text-center">🍩 สัดส่วนประเภทงาน (Categories %)</h3>
-            <div class="h-64 flex justify-center">
+            <div class="h-80 flex justify-center">
                 <canvas id="categoryChart"></canvas>
             </div>
         </div>
@@ -201,7 +201,9 @@
                                 });
 
                                 // 2. ตัดเอาเฉพาะ 6 อันดับแรกมาแสดงใน Legend (กราฟยังวาดครบ)
-                                return allLabels.slice(0, 12);
+                                return allLabels;
+                                //return allLabels.slice(0, 12);
+                                
                             }
                             return [];
                         }

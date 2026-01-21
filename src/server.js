@@ -3,325 +3,118 @@ const path = require('path');
 const session = require('express-session');
 const passport = require('passport');
 const db = require('./config/database');
-const OldLog = require('./models/OldLog');
-const syncController = require('./controllers/syncController');
 const cron = require('node-cron');
 
-// เรียกใช้ Config Passport
+// ✅ เพิ่ม Model เพื่อให้ใช้งานฟังก์ชัน Clear Data ได้
+const OldLog = require('./models/OldLog');
+
+// Controllers
+const syncController = require('./controllers/syncController');
+const dashboardController = require('./controllers/dashboardController');
+
+// Configs
 require('./config/passport');
+const setupHelpers = require('./config/helpers');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ==========================================
-// 1. App Setup & Middleware
+// 1. App Middleware
 // ==========================================
-
 app.set('trust proxy', 1);
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
-
 app.use(session({
     secret: process.env.SESSION_SECRET || 'it_helpdesk_secret_key',
-    resave: false,
-    saveUninitialized: false,
+    resave: false, saveUninitialized: false,
     cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
-
 app.set('view engine', 'ejs');
 app.set('views', './src/views');
 
+// ==========================================
+// 2. Global Setup
+// ==========================================
 app.use((req, res, next) => {
     res.locals.currentUser = req.user || null;
     next();
 });
 
 const ensureAuthenticated = (req, res, next) => {
-    if (req.isAuthenticated()) {
-        return next();
-    }
+    if (req.isAuthenticated()) return next();
     res.redirect('/login');
 };
 
-// ==========================================
-// 2. Global Configs & Helpers
-// ==========================================
-
-const statusConfig = {
-    'fix': { label: 'helpdesk.fix', order: 1 },
-    'claim': { label: 'helpdesk.claim', order: 2 },
-    'closed': { label: 'helpdesk.closed', order: 3 },
-    'cancel': { label: 'helpdesk.cancel', order: 4 },
-    'เรียบร้อย': { label: 'permission.success', order: 5 },
-    'ยกเลิก': { label: 'permission.cancel', order: 6 },
-    'รอเจ้าหน้าที่ IT ดำเนินการ': { label: 'cctv.pending_it', order: 7 },
-    'เสร็จสิ้น': { label: 'cctv.success', order: 8 },
-    'ดราฟ': { label: 'cctv.draft', order: 9 }
-};
-
-const categoryConfig = {
-    // ===========================
-    // 1. Permission (สิทธิ์การใช้งาน) [Order 1-16]
-    // ===========================
-    // Account & Social
-    'ลงทะเบียนพนักงานใหม่': { label: 'permission.registerUser', order: 1 },
-    'Admin Social Media': { label: 'permission.social', order: 2 },
-    'Adobe': { label: 'permission.adobe', order: 3 },
-    'Express': { label: 'permission.express', order: 4 },
-    
-    // Communication
-    'Email': { label: 'permisssion.email', order: 5 },
-    'LINE': { label: 'permission.line', order: 6 },
-    
-    // Storage & Drive
-    'Drive Center': { label: 'permission.NasDrive', order: 7 },
-    'Cloud Drive Center (Shared drives)': { label: 'permission.Gdrive', order: 8 },
-    
-    // Access & Security
-    'SSH-KEY': { label: 'permission.ssh', order: 9 },
-    'Super User': { label: 'permission.ssh', order: 9 },
-    'VPN': { label: 'permission.vpn', order: 10 },
-    'Remote Desktop': { label: 'permission.remoteDesktop', order: 11 },
-    'WIFI': { label: 'permission.wifi', order: 12 },
-    'USB Thumdrive': { label: 'permission.thumbDrive', order: 13 },
-    'Vender Support': { label: 'permission.vender', order: 14 },
-    
-    // Specific Systems
-    'VOIP': { label: 'permission.voip', order: 15 },
-    'Cyber Payroll': { label: 'permission.payroll', order: 16 },
-
-    // ===========================
-    // 2. Helpdesk (แจ้งซ่อม/ปัญหา) [Order 17-31]
-    // ===========================
-    // Hardware หลัก
-    'Computer': { label: 'helpdesk.computer', order: 17 },
-    'Computers': { label: 'helpdesk.computer', order: 17 },
-    'Laptops': { label: 'helpdesk.laptop', order: 18 },
-    'Laptop': { label: 'helpdesk.laptop', order: 18 },
-    'Server': { label: 'helpdesk.server', order: 19 },
-    'Monitor': { label: 'helpdesk.monitor', order: 20 },
-    'Projectors': { label: 'helpdesk.monitor', order: 20 },
-    
-    // อุปกรณ์ต่อพ่วง
-    'Printers': { label: 'helpdesk.printer', order: 21 },
-    'Printer': { label: 'helpdesk.printer', order: 21 },
-    'Scaner': { label: 'helpdesk.scaner', order: 22 },
-    'Scanner': { label: 'helpdesk.scaner', order: 22 },
-    'UPS': { label: 'helpdesk.ups', order: 23 },
-    'Telephone': { label: 'helpdesk.telephone', order: 24 },
-    'USB': { label: 'helpdesk.usb', order: 25 }, // แจ้งปัญหา USB (Port/Device) เสีย
-
-    // Software & System
-    'Software': { label: 'helpdesk.software', order: 26 },
-    'BIC E-Office': { label: 'helpdesk.software', order: 26 },
-    'E-OFFICE': { label: 'helpdesk.software', order: 26 },
-    'Internal Software': { label: 'helpdesk.software', order: 26 },
-    'SAP': { label: 'helpdesk.sap', order: 27 },
-    'Recovery Data': { label: 'helpdesk.recoveryData', order: 28 },
-
-    // Network
-    'Internet': { label: 'helpdesk.internet', order: 29 },
-    'Network': { label: 'helpdesk.network', order: 30 },
-
-    // Others
-    'Other': { label: 'helpdesk.other', order: 31 },
-
-    // ===========================
-    // 3. Services / Request (ส่วนเสริม) [Order 32-37]
-    // ===========================
-    // CCTV
-    'CCTV': { label: 'cctv.cctv', order: 32 },
-    'ขอดูย้อนหลัง': { label: 'cctv.playback', order: 33 },
-    'ขอติดตั้ง': { label: 'cctv.install', order: 34 },
-    'ขอย้ายจุดติดตั้ง': { label: 'cctv.move', order: 35 },
-    
-    // Meeting & Web
-    'Meeting': { label: 'meeting.service', order: 36 },
-    'Web Site': { label: 'dev.website', order: 37 }
-};
-
-app.locals.getStatusLabel = (status) => statusConfig[(status || '').trim()]?.label || status;
-app.locals.getStatusOrder = (status) => statusConfig[(status || '').trim()]?.order || 999;
-app.locals.getCategoryLabel = (cat) => categoryConfig[(cat || '').trim()]?.label || cat;
-app.locals.getCategoryOrder = (cat) => categoryConfig[(cat || '').trim()]?.order || 999;
-app.locals.formatDate = (dateString) => {
-    if (!dateString) return '-';
-    const d = new Date(dateString);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = String(d.getFullYear()).slice(-2);
-    const hour = String(d.getHours()).padStart(2, '0');
-    const min = String(d.getMinutes()).padStart(2, '0');
-    return `${day}.${month}.${year} ${hour}:${min}`;
-};
+// ✅ Setup Helpers (เรียกใช้ฟังก์ชันจากไฟล์ helpers.js)
+setupHelpers(app);
 
 // ==========================================
 // 3. Routes
 // ==========================================
 
+// Auth Routes
 app.get('/login', (req, res) => {
     if (req.isAuthenticated()) return res.redirect('/');
     res.render('login', { devUsers: passport.allowedUsers || [] });
 });
-
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-
 app.get('/auth/google/callback', 
     passport.authenticate('google', { failureRedirect: '/login' }),
     (req, res) => res.redirect('/')
 );
-
 app.get('/logout', (req, res, next) => {
-    req.logout((err) => {
-        if (err) return next(err);
-        res.redirect('/login');
-    });
+    req.logout((err) => { if (err) return next(err); res.redirect('/login'); });
 });
-
+// Dev Login (Mock)
 app.get('/auth/mock/:email', (req, res) => {
-    const email = req.params.email;
-    const user = {
-        email: email,
-        name: email.split('@')[0],
-        role: 'staff',
-        photo: null
-    };
-    req.login(user, (err) => {
-        if (err) return res.redirect('/login');
-        res.redirect('/');
-    });
+    const user = { email: req.params.email, name: req.params.email.split('@')[0], role: 'staff' };
+    req.login(user, (err) => { res.redirect('/'); });
 });
 
-// API Routes
+// Main Routes
 app.get('/api/sync', ensureAuthenticated, syncController.syncAllData);
 
+// ✅ เติม Logic Clear Data ให้สมบูรณ์
 app.post('/api/clear', ensureAuthenticated, async (req, res) => {
     try {
         await OldLog.destroy({ where: {}, truncate: true });
         res.json({ success: true, message: 'All data cleared successfully' });
     } catch (error) {
+        console.error('Clear Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// 📌 Home Dashboard Route (Updated Logic for Monthly Costs)
-app.get('/', ensureAuthenticated, async (req, res) => {
-    try {
-        const logs = await OldLog.findAll({
-            order: [['created_date', 'DESC']]
-        });
-
-        // ============================================
-        // ✅ Dashboard Logic
-        // ============================================
-        const currentYear = new Date().getFullYear();
-        
-        let totalCost = 0;
-        let monthlyStats = new Array(12).fill(0);
-        let monthlyCosts = new Array(12).fill(0); // ✅ 1. เพิ่มตัวแปรเก็บค่าใช้จ่ายรายเดือน
-        let catMap = {};
-        
-        let countTotal = 0;
-        let countClosed = 0;
-        let countActive = 0;
-
-        logs.forEach(log => {
-            if (!log.created_date) return;
-            const date = new Date(log.created_date);
-
-            if (date.getFullYear() === currentYear) {
-                countTotal++;
-                
-                const status = (log.status || '').trim();
-
-                if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(status)) {
-                    countClosed++;
-                } else if (!['cancelled', 'ยกเลิก', 'cancel'].includes(status)) {
-                    countActive++;
-                }
-
-                const monthIndex = date.getMonth();
-                
-                // 1. นับจำนวนงานรายเดือน
-                monthlyStats[monthIndex]++;
-                
-                // 2. รวมค่าใช้จ่าย (Cost) และ บวกยอดรายเดือน
-                const cost = parseFloat(log.cost || 0);
-                if (!isNaN(cost)) {
-                    totalCost += cost;
-                    monthlyCosts[monthIndex] += cost; // ✅ 2. บวกค่าใช้จ่ายลงในเดือนนั้นๆ
-                }
-
-                const catRaw = (log.category || '').trim();
-                const catName = categoryConfig[catRaw]?.label || catRaw;
-                catMap[catName] = (catMap[catName] || 0) + 1;
-            }
-        });
-
-        const sortedCats = Object.entries(catMap)
-            .sort(([,a], [,b]) => b - a)
-            // .slice(0, 5);
-        
-        const dashData = {
-            total: countTotal,
-            closed: countClosed,
-            active: countActive,
-            totalCost: totalCost,
-            monthlyStats: monthlyStats,
-            monthlyCosts: monthlyCosts, // ✅ 3. ส่งตัวแปรนี้ไปให้หน้าจอ
-            categoryLabels: sortedCats.map(([k]) => k),
-            categoryCounts: sortedCats.map(([,v]) => {
-                const percent = countTotal > 0 ? (v / countTotal) * 100 : 0;
-                return percent.toFixed(2);
-            })
-        };
-        // ============================================
-
-        res.render('index', { 
-            logs: logs,
-            dashData: dashData
-        });
-
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        res.status(500).send(`
-            <div style="text-align:center; margin-top:50px;">
-                <h1>❌ Database Error</h1>
-                <p>${error.message}</p>
-            </div>
-        `);
-    }
-});
+// ✅ Dashboard Route (เรียกผ่าน Controller)
+app.get('/', ensureAuthenticated, dashboardController.getDashboard);
 
 // ==========================================
-// 4. Server Start
+// 4. Server Start & Cron Job
 // ==========================================
 
-cron.schedule('0 08 * * *', () => {
+// Auto Sync ทุกชั่วโมง (นาทีที่ 0)
+cron.schedule('0 * * * *', async () => {
     console.log('⏰ Running Scheduled Sync...');
     if (syncController.runScheduledSync) {
-        syncController.runScheduledSync();
+        await syncController.runScheduledSync();
+        // อัปเดตเวลาล่าสุดหลัง Sync เสร็จ
+        app.locals.lastSyncTime = new Date(); 
+        console.log('✅ Time Updated:', app.locals.formatSyncTime(app.locals.lastSyncTime));
     }
 });
 
 const startServer = async () => {
     try {
         await db.authenticate();
-        console.log('✅ Database Connected.');
+        console.log('✅ Database Connected & Synced');
         await db.sync({ alter: true });
-        console.log('✅ Database Synced.');
-
-        app.listen(PORT, () => {
-            console.log(`🚀 Server running on port ${PORT}`);
-        });
-
+        app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
     } catch (error) {
-        console.error('❌ Database connection error:', error);
+        console.error('❌ Server Error:', error);
     }
 };
 

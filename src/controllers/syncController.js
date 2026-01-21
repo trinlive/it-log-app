@@ -1,7 +1,9 @@
 const axios = require('axios');
 const OldLog = require('../models/OldLog');
 
-// === Helper Function: บันทึกข้อมูลลง DB (Updated Logic) ===
+// ==========================================
+// Helper Function: บันทึกข้อมูลลง DB
+// ==========================================
 // Return: true ถ้ามีการ Insert/Update, false ถ้าไม่มีการเปลี่ยนแปลง
 const saveLogToDB = async (data) => {
     try {
@@ -56,10 +58,10 @@ const saveLogToDB = async (data) => {
 };
 
 // ==========================================
-// ✅ Main Function: Sync All Data
+// ✅ Main Function: Sync All Data (Manual Click)
 // ==========================================
 exports.syncAllData = async (req, res) => {
-    console.log('[Sync] Starting Full Sync Process...');
+    console.log('[Sync] Starting Manual Sync Process...');
     
     try {
         const [helpdeskRes, requestRes, cctvRes] = await Promise.all([
@@ -145,14 +147,22 @@ exports.syncAllData = async (req, res) => {
             }
         }
 
-        console.log(`[Sync] Finished. Actually Updated/Inserted: ${updatedCount}`);
+        console.log(`[Sync] Finished. Updated/Inserted: ${updatedCount}`);
         
-        // ส่งจำนวนที่อัปเดตจริงกลับไป
-        res.json({ message: 'Sync All Data Successful!', total_records: updatedCount });
+        // ✅ 1. อัปเดตเวลาล่าสุดทันที (สำหรับ Manual Sync)
+        req.app.locals.lastSyncTime = new Date();
+
+        // ✅ 2. ส่ง Response กลับ
+        res.json({ 
+            success: true,
+            message: 'Sync All Data Successful!', 
+            total_records: updatedCount,
+            timestamp: req.app.locals.formatSyncTime(req.app.locals.lastSyncTime)
+        });
 
     } catch (error) {
         console.error('Sync All Error:', error);
-        res.status(500).json({ message: `Server Error: ${error.message}` });
+        res.status(500).json({ success: false, message: `Server Error: ${error.message}` });
     }
 };
 
@@ -170,7 +180,7 @@ exports.runScheduledSync = async () => {
 
         let updatedCount = 0;
 
-        // Helper สำหรับ Loop ใน Cron (ใช้ Logic เดียวกับด้านบน)
+        // Helper สำหรับ Loop ใน Cron (Logic เดียวกับด้านบน)
         const processItems = async (items, type) => {
             if (!Array.isArray(items)) return;
             for (const item of items) {
@@ -215,8 +225,11 @@ exports.runScheduledSync = async () => {
         await processItems(cctvRes.data, 'cctv');
 
         console.log(`✅ Scheduled Sync Finished. Records Updated: ${updatedCount}`);
+        
+        return true; // ✅ ส่งค่า true กลับไปให้ server.js เพื่อบอกว่าสำเร็จ (จะได้อัปเดตเวลา)
 
     } catch (error) {
         console.error("❌ Scheduled Sync Failed:", error.message);
+        return false;
     }
 };

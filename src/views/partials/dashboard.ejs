@@ -4,8 +4,8 @@
             <i class="fa-solid fa-chart-pie text-blue-600"></i> 
             Dashboard ภาพรวมปี <%= new Date().getFullYear() %>
         </h2>
-        <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
-            ข้อมูลล่าสุด: <%= new Date().toLocaleDateString('th-TH') %>
+        <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded font-mono">
+            <%= formatSyncTime(lastSyncTime) %>
         </span>
     </div>
 
@@ -77,8 +77,8 @@
                     label: 'จำนวนงาน (Ticket)',
                     data: chartData.monthlyStats,
                     backgroundColor: '#3b82f6', // สีฟ้า
-                    order: 2, // อยู่ด้านหลัง
-                    yAxisID: 'y', // แกนซ้าย
+                    order: 2,
+                    yAxisID: 'y',
                     borderRadius: 4
                 },
                 {
@@ -91,8 +91,8 @@
                     pointBackgroundColor: '#fff',
                     pointBorderColor: '#f59e0b',
                     pointRadius: 4,
-                    order: 1, // อยู่ด้านหน้า
-                    yAxisID: 'y1', // แกนขวา
+                    order: 1,
+                    yAxisID: 'y1',
                     tension: 0.3
                 }
             ]
@@ -136,7 +136,7 @@
                     position: 'right',
                     title: { display: true, text: 'ค่าใช้จ่าย (บาท)' },
                     beginAtZero: true,
-                    grid: { drawOnChartArea: false }, // ซ่อนเส้นตารางแกนขวา
+                    grid: { drawOnChartArea: false },
                     ticks: {
                         callback: function(value) {
                             return '฿' + value.toLocaleString('th-TH', { notation: "compact" });
@@ -182,17 +182,17 @@
                         boxWidth: 10, 
                         font: { size: 10 },
                         padding: 15,
-                        // ✅ Logic แสดงชื่อ + % และตัดเหลือแค่ Top 5
+                        // ✅ ฟังก์ชันแสดง Label พร้อม % (แสดงทั้งหมด)
                         generateLabels: function(chart) {
                             const data = chart.data;
                             if (data.labels.length && data.datasets.length) {
-                                // 1. สร้าง Label ทั้งหมดก่อน
+                                // 1. สร้าง Label ทั้งหมด
                                 const allLabels = data.labels.map((label, i) => {
                                     const value = data.datasets[0].data[i];
                                     const fillStyle = data.datasets[0].backgroundColor[i % data.datasets[0].backgroundColor.length];
                                     
                                     return {
-                                        // รูปแบบ: ชื่อหมวด XX.XX%
+                                        // รูปแบบ: ชื่อหมวด 12.34%
                                         text: `${label} ${value}%`, 
                                         fillStyle: fillStyle,
                                         hidden: isNaN(data.datasets[0].data[i]),
@@ -200,10 +200,8 @@
                                     };
                                 });
 
-                                // 2. ตัดเอาเฉพาะ 6 อันดับแรกมาแสดงใน Legend (กราฟยังวาดครบ)
+                                // 2. ✅ คืนค่ากลับไปทั้งหมด (แสดงทุก Label)
                                 return allLabels;
-                                //return allLabels.slice(0, 12);
-                                
                             }
                             return [];
                         }

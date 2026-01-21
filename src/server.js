@@ -7,7 +7,7 @@ const OldLog = require('./models/OldLog');
 const syncController = require('./controllers/syncController');
 const cron = require('node-cron');
 
-// เรียกใช้ Config Passport (สำคัญ: ต้องเรียกก่อนเริ่ม App เพื่อให้ passport.allowedUsers ใช้งานได้)
+// เรียกใช้ Config Passport
 require('./config/passport');
 
 const app = express();
@@ -17,36 +17,30 @@ const PORT = process.env.PORT || 3000;
 // 1. App Setup & Middleware
 // ==========================================
 
-app.set('trust proxy', 1); // รองรับ Reverse Proxy/Docker
+app.set('trust proxy', 1);
 
-// Middleware พื้นฐาน
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Session Setup
 app.use(session({
     secret: process.env.SESSION_SECRET || 'it_helpdesk_secret_key',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 24 * 60 * 60 * 1000 } // 1 วัน
+    cookie: { maxAge: 24 * 60 * 60 * 1000 }
 }));
 
-// Passport Setup
 app.use(passport.initialize());
 app.use(passport.session());
 
-// View Engine
 app.set('view engine', 'ejs');
 app.set('views', './src/views');
 
-// Global Middleware: ส่งข้อมูล User ไปทุกหน้า View
 app.use((req, res, next) => {
     res.locals.currentUser = req.user || null;
     next();
 });
 
-// Helper Middleware: ฟังก์ชันป้องกัน Route (ต้อง Login ก่อน)
 const ensureAuthenticated = (req, res, next) => {
     if (req.isAuthenticated()) {
         return next();
@@ -55,7 +49,7 @@ const ensureAuthenticated = (req, res, next) => {
 };
 
 // ==========================================
-// 2. Global Configs & Helpers (สำหรับ Views)
+// 2. Global Configs & Helpers
 // ==========================================
 
 const statusConfig = {
@@ -110,13 +104,11 @@ const categoryConfig = {
     'ขอติดตั้ง': { label: 'cctv.install', order: 28 },
     'ขอย้ายจุดติดตั้ง': { label: 'cctv.move', order: 29 },
 
-    // ✅ Update: Meeting
+    // Meeting & Website
     'Meeting': { label: 'meeting.service', order: 30 },
-    // ✅ Update: Website
     'Web Site': { label: 'dev.website', order: 31 }
 };
 
-// Attach Helpers to app.locals
 app.locals.getStatusLabel = (status) => statusConfig[(status || '').trim()]?.label || status;
 app.locals.getStatusOrder = (status) => statusConfig[(status || '').trim()]?.order || 999;
 app.locals.getCategoryLabel = (cat) => categoryConfig[(cat || '').trim()]?.label || cat;
@@ -136,17 +128,11 @@ app.locals.formatDate = (dateString) => {
 // 3. Routes
 // ==========================================
 
-// --- Auth Routes ---
-
-// 1. หน้า Login (แก้ไข: ส่งรายชื่อ Dev Users ไปด้วย)
 app.get('/login', (req, res) => {
     if (req.isAuthenticated()) return res.redirect('/');
-    res.render('login', { 
-        devUsers: passport.allowedUsers || [] 
-    });
+    res.render('login', { devUsers: passport.allowedUsers || [] });
 });
 
-// 2. Google Login
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback', 
@@ -154,7 +140,6 @@ app.get('/auth/google/callback',
     (req, res) => res.redirect('/')
 );
 
-// 3. Logout
 app.get('/logout', (req, res, next) => {
     req.logout((err) => {
         if (err) return next(err);
@@ -162,49 +147,110 @@ app.get('/logout', (req, res, next) => {
     });
 });
 
-// ✅ 4. เพิ่ม Route สำหรับ Dev Login (ทางลัดสำหรับการ Test)
 app.get('/auth/mock/:email', (req, res) => {
     const email = req.params.email;
-    
-    // สร้าง User จำลอง
     const user = {
         email: email,
-        name: email.split('@')[0], // ใช้ชื่อหน้า @ เป็นชื่อเล่น
+        name: email.split('@')[0],
         role: 'staff',
         photo: null
     };
-
-    // สั่ง Login ทันที
     req.login(user, (err) => {
         if (err) return res.redirect('/login');
         res.redirect('/');
     });
 });
 
-// --- Main Routes (Protected) ---
-
-// 1. Sync Data (Protect)
+// API Routes
 app.get('/api/sync', ensureAuthenticated, syncController.syncAllData);
 
-// 2. Clear Data (Protect)
 app.post('/api/clear', ensureAuthenticated, async (req, res) => {
     try {
         await OldLog.destroy({ where: {}, truncate: true });
         res.json({ success: true, message: 'All data cleared successfully' });
     } catch (error) {
-        console.error('Clear Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// 3. Home Dashboard (Protect)
+// 📌 Home Dashboard Route (Updated Logic for Monthly Costs)
 app.get('/', ensureAuthenticated, async (req, res) => {
     try {
-        // ✅ แก้ไข: เอา limit: 1000 ออก เพื่อให้ดึงข้อมูลทั้งหมด
         const logs = await OldLog.findAll({
             order: [['created_date', 'DESC']]
         });
-        res.render('index', { logs: logs });
+
+        // ============================================
+        // ✅ Dashboard Logic
+        // ============================================
+        const currentYear = new Date().getFullYear();
+        
+        let totalCost = 0;
+        let monthlyStats = new Array(12).fill(0);
+        let monthlyCosts = new Array(12).fill(0); // ✅ 1. เพิ่มตัวแปรเก็บค่าใช้จ่ายรายเดือน
+        let catMap = {};
+        
+        let countTotal = 0;
+        let countClosed = 0;
+        let countActive = 0;
+
+        logs.forEach(log => {
+            if (!log.created_date) return;
+            const date = new Date(log.created_date);
+
+            if (date.getFullYear() === currentYear) {
+                countTotal++;
+                
+                const status = (log.status || '').trim();
+
+                if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(status)) {
+                    countClosed++;
+                } else if (!['cancelled', 'ยกเลิก', 'cancel'].includes(status)) {
+                    countActive++;
+                }
+
+                const monthIndex = date.getMonth();
+                
+                // 1. นับจำนวนงานรายเดือน
+                monthlyStats[monthIndex]++;
+                
+                // 2. รวมค่าใช้จ่าย (Cost) และ บวกยอดรายเดือน
+                const cost = parseFloat(log.cost || 0);
+                if (!isNaN(cost)) {
+                    totalCost += cost;
+                    monthlyCosts[monthIndex] += cost; // ✅ 2. บวกค่าใช้จ่ายลงในเดือนนั้นๆ
+                }
+
+                const catRaw = (log.category || '').trim();
+                const catName = categoryConfig[catRaw]?.label || catRaw;
+                catMap[catName] = (catMap[catName] || 0) + 1;
+            }
+        });
+
+        const sortedCats = Object.entries(catMap)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5);
+        
+        const dashData = {
+            total: countTotal,
+            closed: countClosed,
+            active: countActive,
+            totalCost: totalCost,
+            monthlyStats: monthlyStats,
+            monthlyCosts: monthlyCosts, // ✅ 3. ส่งตัวแปรนี้ไปให้หน้าจอ
+            categoryLabels: sortedCats.map(([k]) => k),
+            categoryCounts: sortedCats.map(([,v]) => {
+                const percent = countTotal > 0 ? (v / countTotal) * 100 : 0;
+                return percent.toFixed(2);
+            })
+        };
+        // ============================================
+
+        res.render('index', { 
+            logs: logs,
+            dashData: dashData
+        });
+
     } catch (error) {
         console.error('Error fetching data:', error);
         res.status(500).send(`
@@ -217,10 +263,9 @@ app.get('/', ensureAuthenticated, async (req, res) => {
 });
 
 // ==========================================
-// 4. Server Start & Scheduled Tasks
+// 4. Server Start
 // ==========================================
 
-// Cron Job
 cron.schedule('0 08 * * *', () => {
     console.log('⏰ Running Scheduled Sync...');
     if (syncController.runScheduledSync) {
@@ -228,21 +273,19 @@ cron.schedule('0 08 * * *', () => {
     }
 });
 
-// Start Server
 const startServer = async () => {
     try {
         await db.authenticate();
-        console.log('✅ Connection to MariaDB has been established successfully.');
+        console.log('✅ Database Connected.');
         await db.sync({ alter: true });
-        console.log('✅ Database Synced (Altered).');
+        console.log('✅ Database Synced.');
 
         app.listen(PORT, () => {
-            console.log(`🚀 Server is running on port ${PORT}`);
-            console.log(`🌐 Visit: http://localhost:${process.env.EXTERNAL_PORT || 38000}`);
+            console.log(`🚀 Server running on port ${PORT}`);
         });
 
     } catch (error) {
-        console.error('❌ Unable to connect to the database:', error);
+        console.error('❌ Database connection error:', error);
     }
 };
 

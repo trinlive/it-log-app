@@ -1,0 +1,193 @@
+<div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-blue-600"></i> 
+            Dashboard ภาพรวมปี <%= new Date().getFullYear() %>
+        </h2>
+        <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+            ข้อมูลล่าสุด: <%= new Date().toLocaleDateString('th-TH') %>
+        </span>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="p-4 rounded-lg bg-blue-50 border border-blue-100">
+            <div class="text-xs text-blue-600 font-semibold mb-1">งานทั้งหมด (Total)</div>
+            <div class="text-2xl font-bold text-blue-800"><%= dashData.total %></div>
+            <div class="text-[10px] text-blue-500 mt-1">รายการในปีนี้</div>
+        </div>
+        <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-100">
+            <div class="text-xs text-emerald-600 font-semibold mb-1">ปิดงานแล้ว (Closed)</div>
+            <div class="text-2xl font-bold text-emerald-800"><%= dashData.closed %></div>
+            <div class="text-[10px] text-emerald-500 mt-1">
+                <% if(dashData.total > 0) { %>
+                    <%= ((dashData.closed / dashData.total) * 100).toFixed(1) %>% Success Rate
+                <% } else { %>
+                    0% Success Rate
+                <% } %>
+            </div>
+        </div>
+        <div class="p-4 rounded-lg bg-amber-50 border border-amber-100">
+            <div class="text-xs text-amber-600 font-semibold mb-1">รอตรวจสอบ (Active)</div>
+            <div class="text-2xl font-bold text-amber-800"><%= dashData.active %></div>
+            <div class="text-[10px] text-amber-500 mt-1">งานที่กำลังดำเนินการ</div>
+        </div>
+        <div class="p-4 rounded-lg bg-indigo-50 border border-indigo-100">
+            <div class="text-xs text-indigo-600 font-semibold mb-1">ค่าใช้จ่ายรวม (Cost)</div>
+            <div class="text-2xl font-bold text-indigo-800">
+                ฿<%= dashData.totalCost.toLocaleString('th-TH', {maximumFractionDigits: 0}) %>
+            </div>
+            <div class="text-[10px] text-indigo-500 mt-1">งบประมาณที่ใช้ไป</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 bg-white p-4 rounded-lg border border-slate-100 shadow-sm">
+            <h3 class="text-sm font-semibold text-slate-700 mb-4 text-center">📊 สถิติงานและค่าใช้จ่ายรายเดือน (Tickets & Costs)</h3>
+            <div class="h-80"> <canvas id="combinedChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg border border-slate-100 shadow-sm h-fit">
+            <h3 class="text-sm font-semibold text-slate-700 mb-4 text-center">🍩 สัดส่วนประเภทงาน (Categories %)</h3>
+            <div class="h-64 flex justify-center">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const chartData = <%- JSON.stringify(dashData) %>;
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+    // 1. ✅ Config Combined Chart (กราฟรวม 2 แกน)
+    const ctxCombined = document.getElementById('combinedChart').getContext('2d');
+    new Chart(ctxCombined, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'จำนวนงาน (Ticket)',
+                    data: chartData.monthlyStats,
+                    backgroundColor: '#3b82f6', // สีฟ้า
+                    order: 2, // ให้แท่งนี้อยู่ด้านหลัง (ถ้าซ้อนกัน)
+                    yAxisID: 'y', // ผูกกับแกนซ้าย
+                    borderRadius: 4
+                },
+                {
+                    label: 'ค่าใช้จ่าย (บาท)',
+                    data: chartData.monthlyCosts,
+                    backgroundColor: '#f59e0b', // สีส้ม
+                    borderColor: '#f59e0b',
+                    type: 'line', // ✅ ใช้กราฟเส้นสำหรับเงิน จะได้ดูง่ายไม่ตีกับแท่ง
+                    borderWidth: 2,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#f59e0b',
+                    pointRadius: 4,
+                    order: 1, // ให้เส้นอยู่ด้านหน้า
+                    yAxisID: 'y1', // ผูกกับแกนขวา
+                    tension: 0.3 // เส้นโค้งสวยๆ
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.dataset.yAxisID === 'y1') {
+                                // ถ้าเป็นแกนเงิน ให้ใส่ ฿
+                                label += '฿' + context.raw.toLocaleString('th-TH');
+                            } else {
+                                // ถ้าเป็นแกนจำนวนงาน
+                                label += context.raw + ' งาน';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: 'จำนวนงาน (Ticket)' },
+                    beginAtZero: true
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: { display: true, text: 'ค่าใช้จ่าย (บาท)' },
+                    beginAtZero: true,
+                    grid: {
+                        drawOnChartArea: false, // ไม่ต้องตีเส้นตารางของแกนขวา เดี๋ยวลายตา
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return '฿' + value.toLocaleString('th-TH', { notation: "compact" });
+                        }
+                    }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // 2. Config Doughnut Chart (เหมือนเดิมเป๊ะ)
+    const ctxCat = document.getElementById('categoryChart').getContext('2d');
+    new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+            labels: chartData.categoryLabels,
+            datasets: [{
+                data: chartData.categoryCounts,
+                backgroundColor: [
+                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+                    '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'
+                ],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    position: 'bottom', 
+                    labels: { boxWidth: 10, font: { size: 10 } } 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) label += ': ';
+                            label += context.raw + '%';
+                            return label;
+                        }
+                    }
+                }
+            },
+            cutout: '65%'
+        }
+    });
+</script>

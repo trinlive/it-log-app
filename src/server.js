@@ -65,48 +65,84 @@ const statusConfig = {
 };
 
 const categoryConfig = {
-    // Permission
+    // ===========================
+    // 1. Permission (สิทธิ์การใช้งาน) [Order 1-16]
+    // ===========================
+    // Account & Social
     'ลงทะเบียนพนักงานใหม่': { label: 'permission.registerUser', order: 1 },
     'Admin Social Media': { label: 'permission.social', order: 2 },
-    'Drive Center': { label: 'permission.NasDrive', order: 3 },
-    'Email': { label: 'permisssion.email', order: 4 },
-    'Cloud Drive Center (Shared drives)': { label: 'permission.Gdrive', order: 5 },
-    'LINE': { label: 'permission.line', order: 6 },
-    'SSH-KEY': { label: 'permission.ssh', order: 7 },
-    'USB Thumdrive': { label: 'permission.thumbDrive', order: 8 },
-    'WIFI': { label: 'permission.wifi', order: 9 },
-    'VPN': { label: 'permission.vpn', order: 10 },
-    'Vender Support': { label: 'permission.vender', order: 11 },
-    'Remote Desktop': { label: 'permission.remoteDesktop', order: 12 },
+    'Adobe': { label: 'permission.adobe', order: 3 },
+    'Express': { label: 'permission.express', order: 4 },
     
-    // Helpdesk
-    'Computer': { label: 'helpdesk.computer', order: 13 },
-    'Computers': { label: 'helpdesk.computer', order: 13 },
-    'Internet': { label: 'helpdesk.internet', order: 14 },
-    'Laptops': { label: 'helpdesk.laptop', order: 15 },
-    'Laptop': { label: 'helpdesk.laptop', order: 15 },
-    'Network': { label: 'helpdesk.network', order: 16 },
-    'Other': { label: 'helpdesk.other', order: 17 },
-    'Printers': { label: 'helpdesk.printer', order: 18 },
-    'Printer': { label: 'helpdesk.printer', order: 18 },
-    'Recovery Data': { label: 'helpdesk.recoveryData', order: 19 },
-    'SAP': { label: 'helpdesk.sap', order: 20 },
-    'Scaner': { label: 'helpdesk.scaner', order: 21 },
-    'Scanner': { label: 'helpdesk.scaner', order: 21 },
-    'Software': { label: 'helpdesk.software', order: 22 },
+    // Communication
+    'Email': { label: 'permisssion.email', order: 5 },
+    'LINE': { label: 'permission.line', order: 6 },
+    
+    // Storage & Drive
+    'Drive Center': { label: 'permission.NasDrive', order: 7 },
+    'Cloud Drive Center (Shared drives)': { label: 'permission.Gdrive', order: 8 },
+    
+    // Access & Security
+    'SSH-KEY': { label: 'permission.ssh', order: 9 },
+    'Super User': { label: 'permission.ssh', order: 9 },
+    'VPN': { label: 'permission.vpn', order: 10 },
+    'Remote Desktop': { label: 'permission.remoteDesktop', order: 11 },
+    'WIFI': { label: 'permission.wifi', order: 12 },
+    'USB Thumdrive': { label: 'permission.thumbDrive', order: 13 },
+    'Vender Support': { label: 'permission.vender', order: 14 },
+    
+    // Specific Systems
+    'VOIP': { label: 'permission.voip', order: 15 },
+    'Cyber Payroll': { label: 'permission.payroll', order: 16 },
+
+    // ===========================
+    // 2. Helpdesk (แจ้งซ่อม/ปัญหา) [Order 17-31]
+    // ===========================
+    // Hardware หลัก
+    'Computer': { label: 'helpdesk.computer', order: 17 },
+    'Computers': { label: 'helpdesk.computer', order: 17 },
+    'Laptops': { label: 'helpdesk.laptop', order: 18 },
+    'Laptop': { label: 'helpdesk.laptop', order: 18 },
+    'Server': { label: 'helpdesk.server', order: 19 },
+    'Monitor': { label: 'helpdesk.monitor', order: 20 },
+    'Projectors': { label: 'helpdesk.monitor', order: 20 },
+    
+    // อุปกรณ์ต่อพ่วง
+    'Printers': { label: 'helpdesk.printer', order: 21 },
+    'Printer': { label: 'helpdesk.printer', order: 21 },
+    'Scaner': { label: 'helpdesk.scaner', order: 22 },
+    'Scanner': { label: 'helpdesk.scaner', order: 22 },
     'UPS': { label: 'helpdesk.ups', order: 23 },
     'Telephone': { label: 'helpdesk.telephone', order: 24 },
-    'USB': { label: 'helpdesk.usb', order: 25 },
+    'USB': { label: 'helpdesk.usb', order: 25 }, // แจ้งปัญหา USB (Port/Device) เสีย
 
+    // Software & System
+    'Software': { label: 'helpdesk.software', order: 26 },
+    'BIC E-Office': { label: 'helpdesk.software', order: 26 },
+    'E-OFFICE': { label: 'helpdesk.software', order: 26 },
+    'Internal Software': { label: 'helpdesk.software', order: 26 },
+    'SAP': { label: 'helpdesk.sap', order: 27 },
+    'Recovery Data': { label: 'helpdesk.recoveryData', order: 28 },
+
+    // Network
+    'Internet': { label: 'helpdesk.internet', order: 29 },
+    'Network': { label: 'helpdesk.network', order: 30 },
+
+    // Others
+    'Other': { label: 'helpdesk.other', order: 31 },
+
+    // ===========================
+    // 3. Services / Request (ส่วนเสริม) [Order 32-37]
+    // ===========================
     // CCTV
-    'CCTV': { label: 'cctv.cctv', order: 26 },
-    'ขอดูย้อนหลัง': { label: 'cctv.playback', order: 27 },
-    'ขอติดตั้ง': { label: 'cctv.install', order: 28 },
-    'ขอย้ายจุดติดตั้ง': { label: 'cctv.move', order: 29 },
-
-    // Meeting & Website
-    'Meeting': { label: 'meeting.service', order: 30 },
-    'Web Site': { label: 'dev.website', order: 31 }
+    'CCTV': { label: 'cctv.cctv', order: 32 },
+    'ขอดูย้อนหลัง': { label: 'cctv.playback', order: 33 },
+    'ขอติดตั้ง': { label: 'cctv.install', order: 34 },
+    'ขอย้ายจุดติดตั้ง': { label: 'cctv.move', order: 35 },
+    
+    // Meeting & Web
+    'Meeting': { label: 'meeting.service', order: 36 },
+    'Web Site': { label: 'dev.website', order: 37 }
 };
 
 app.locals.getStatusLabel = (status) => statusConfig[(status || '').trim()]?.label || status;
@@ -229,7 +265,7 @@ app.get('/', ensureAuthenticated, async (req, res) => {
 
         const sortedCats = Object.entries(catMap)
             .sort(([,a], [,b]) => b - a)
-            .slice(0, 5);
+            // .slice(0, 5);
         
         const dashData = {
             total: countTotal,

@@ -44,7 +44,8 @@
         
         <div class="lg:col-span-2 bg-white p-4 rounded-lg border border-slate-100 shadow-sm">
             <h3 class="text-sm font-semibold text-slate-700 mb-4 text-center">📊 สถิติงานและค่าใช้จ่ายรายเดือน (Tickets & Costs)</h3>
-            <div class="h-80"> <canvas id="combinedChart"></canvas>
+            <div class="h-80">
+                <canvas id="combinedChart"></canvas>
             </div>
         </div>
 
@@ -63,7 +64,9 @@
     const chartData = <%- JSON.stringify(dashData) %>;
     const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
-    // 1. ✅ Config Combined Chart (กราฟรวม 2 แกน)
+    // ==========================================
+    // 1. Config Combined Chart (Ticket & Cost)
+    // ==========================================
     const ctxCombined = document.getElementById('combinedChart').getContext('2d');
     new Chart(ctxCombined, {
         type: 'bar',
@@ -74,8 +77,8 @@
                     label: 'จำนวนงาน (Ticket)',
                     data: chartData.monthlyStats,
                     backgroundColor: '#3b82f6', // สีฟ้า
-                    order: 2, // ให้แท่งนี้อยู่ด้านหลัง (ถ้าซ้อนกัน)
-                    yAxisID: 'y', // ผูกกับแกนซ้าย
+                    order: 2, // อยู่ด้านหลัง
+                    yAxisID: 'y', // แกนซ้าย
                     borderRadius: 4
                 },
                 {
@@ -83,14 +86,14 @@
                     data: chartData.monthlyCosts,
                     backgroundColor: '#f59e0b', // สีส้ม
                     borderColor: '#f59e0b',
-                    type: 'line', // ✅ ใช้กราฟเส้นสำหรับเงิน จะได้ดูง่ายไม่ตีกับแท่ง
+                    type: 'line', // กราฟเส้น
                     borderWidth: 2,
                     pointBackgroundColor: '#fff',
                     pointBorderColor: '#f59e0b',
                     pointRadius: 4,
-                    order: 1, // ให้เส้นอยู่ด้านหน้า
-                    yAxisID: 'y1', // ผูกกับแกนขวา
-                    tension: 0.3 // เส้นโค้งสวยๆ
+                    order: 1, // อยู่ด้านหน้า
+                    yAxisID: 'y1', // แกนขวา
+                    tension: 0.3
                 }
             ]
         },
@@ -107,14 +110,11 @@
                     callbacks: {
                         label: function(context) {
                             let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
+                            if (label) label += ': ';
+                            
                             if (context.dataset.yAxisID === 'y1') {
-                                // ถ้าเป็นแกนเงิน ให้ใส่ ฿
                                 label += '฿' + context.raw.toLocaleString('th-TH');
                             } else {
-                                // ถ้าเป็นแกนจำนวนงาน
                                 label += context.raw + ' งาน';
                             }
                             return label;
@@ -136,34 +136,38 @@
                     position: 'right',
                     title: { display: true, text: 'ค่าใช้จ่าย (บาท)' },
                     beginAtZero: true,
-                    grid: {
-                        drawOnChartArea: false, // ไม่ต้องตีเส้นตารางของแกนขวา เดี๋ยวลายตา
-                    },
+                    grid: { drawOnChartArea: false }, // ซ่อนเส้นตารางแกนขวา
                     ticks: {
                         callback: function(value) {
                             return '฿' + value.toLocaleString('th-TH', { notation: "compact" });
                         }
                     }
                 },
-                x: {
-                    grid: { display: false }
-                }
+                x: { grid: { display: false } }
             }
         }
     });
 
-    // 2. Config Doughnut Chart (เหมือนเดิมเป๊ะ)
+    // ==========================================
+    // 2. Config Doughnut Chart (Categories)
+    // ==========================================
     const ctxCat = document.getElementById('categoryChart').getContext('2d');
+    
+    // ชุดสีสำหรับกราฟ (ใส่เผื่อไว้หลายๆ สี)
+    const backgroundColors = [
+        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+        '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6',
+        '#0ea5e9', '#84cc16', '#eab308', '#f43f5e',
+        '#64748b', '#a8a29e', '#78716c', '#0f766e'
+    ];
+
     new Chart(ctxCat, {
         type: 'doughnut',
         data: {
             labels: chartData.categoryLabels,
             datasets: [{
                 data: chartData.categoryCounts,
-                backgroundColor: [
-                    '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
-                    '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'
-                ],
+                backgroundColor: backgroundColors,
                 borderWidth: 0,
                 hoverOffset: 4
             }]
@@ -173,8 +177,35 @@
             maintainAspectRatio: false,
             plugins: {
                 legend: { 
-                    position: 'bottom', 
-                    labels: { boxWidth: 10, font: { size: 10 } } 
+                    position: 'bottom',
+                    labels: { 
+                        boxWidth: 10, 
+                        font: { size: 10 },
+                        padding: 15,
+                        // ✅ Logic แสดงชื่อ + % และตัดเหลือแค่ Top 5
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                // 1. สร้าง Label ทั้งหมดก่อน
+                                const allLabels = data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const fillStyle = data.datasets[0].backgroundColor[i % data.datasets[0].backgroundColor.length];
+                                    
+                                    return {
+                                        // รูปแบบ: ชื่อหมวด XX.XX%
+                                        text: `${label} ${value}%`, 
+                                        fillStyle: fillStyle,
+                                        hidden: isNaN(data.datasets[0].data[i]),
+                                        index: i
+                                    };
+                                });
+
+                                // 2. ตัดเอาเฉพาะ 6 อันดับแรกมาแสดงใน Legend (กราฟยังวาดครบ)
+                                return allLabels.slice(0, 12);
+                            }
+                            return [];
+                        }
+                    } 
                 },
                 tooltip: {
                     callbacks: {
@@ -187,7 +218,7 @@
                     }
                 }
             },
-            cutout: '65%'
+            cutout: '60%'
         }
     });
 </script>

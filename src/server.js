@@ -23,8 +23,11 @@ const PORT = process.env.PORT || 3000;
 // 1. App Middleware
 // ==========================================
 app.set('trust proxy', 1);
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// ✅ ปรับเพิ่ม Limit เพื่อรองรับการ Import JSON ไฟล์ใหญ่
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
     secret: process.env.SESSION_SECRET || 'it_helpdesk_secret_key',
@@ -75,10 +78,15 @@ app.get('/auth/mock/:email', (req, res) => {
     req.login(user, (err) => { res.redirect('/'); });
 });
 
-// Main Routes
+// --- Main Routes ---
+
+// 1. Sync Data (ดึงจาก API)
 app.get('/api/sync', ensureAuthenticated, syncController.syncAllData);
 
-// ✅ เติม Logic Clear Data ให้สมบูรณ์
+// ✅ 2. Import Data (รับ JSON จากหน้าเว็บ) - เพิ่ม Route นี้
+app.post('/api/import', ensureAuthenticated, syncController.importManualData);
+
+// 3. Clear Data (ล้างข้อมูล)
 app.post('/api/clear', ensureAuthenticated, async (req, res) => {
     try {
         await OldLog.destroy({ where: {}, truncate: true });

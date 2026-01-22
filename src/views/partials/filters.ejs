@@ -1,32 +1,31 @@
 <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
     
-    <div class="flex flex-col lg:flex-row gap-3 lg:items-center justify-between">
+    <div class="flex flex-col xl:flex-row gap-4 justify-between">
         
-        <div class="flex flex-col sm:flex-row gap-3 flex-grow">
-            <div class="relative flex-grow min-w-[200px]">
+        <div class="flex flex-col md:flex-row gap-3 flex-grow xl:max-w-4xl">
+            
+            <div class="relative flex-grow md:flex-1">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i class="fa-solid fa-magnifying-glass text-slate-400"></i>
                 </div>
                 <input type="text" id="searchInput" onkeyup="filterTable(true)" 
-                    class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150 ease-in-out sm:text-sm" 
-                    placeholder="ค้นหา Ticket, รายละเอียด...">
+                    class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 transition sm:text-sm" 
+                    placeholder="ค้นหา Ticket...">
             </div>
 
-            <div class="flex gap-2">
+            <div class="flex gap-2 w-full md:w-auto">
                 <input type="date" id="startDateFilter" onchange="filterTable(true)" 
-                    class="block w-full sm:w-36 pl-2 pr-2 py-2 border border-slate-300 rounded-lg text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm cursor-pointer"
-                    title="วันที่เริ่มต้น">
+                    class="block w-1/2 md:w-36 px-2 py-2 border border-slate-300 rounded-lg text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm cursor-pointer">
                 <input type="date" id="endDateFilter" onchange="filterTable(true)" 
-                    class="block w-full sm:w-36 pl-2 pr-2 py-2 border border-slate-300 rounded-lg text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm cursor-pointer"
-                    title="ถึงวันที่">
+                    class="block w-1/2 md:w-36 px-2 py-2 border border-slate-300 rounded-lg text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm cursor-pointer">
             </div>
             
-            <div class="relative lg:w-48">
+            <div class="relative w-full md:w-48">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i class="fa-solid fa-layer-group text-slate-400"></i>
                 </div>
                 <select id="categoryFilter" onchange="filterTable(true)" 
-                    class="block w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm appearance-none cursor-pointer text-slate-600 font-medium">
+                    class="block w-full pl-9 pr-8 py-2 border border-slate-300 rounded-lg leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm appearance-none cursor-pointer text-slate-600 font-medium truncate">
                     <option value="">ทุกหมวดหมู่</option>
                     <% 
                         let uniqueCats = [...new Set(logs.map(item => (item.category || '').trim()))].filter(Boolean);
@@ -42,48 +41,58 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 justify-end bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+        <div class="flex flex-col sm:flex-row items-center gap-3 justify-between xl:justify-end bg-slate-50 xl:bg-transparent p-3 xl:p-0 rounded-lg border xl:border-0 border-slate-100">
             
-            <div class="px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-600 shadow-sm whitespace-nowrap">
-                <i class="fa-solid fa-database mr-1 text-slate-400"></i>
-                <span id="totalRecordsDisplay">...</span> รายการ
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                <div class="px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-600 shadow-sm whitespace-nowrap">
+                    <i class="fa-solid fa-database mr-1 text-slate-400"></i>
+                    <span id="totalRecordsDisplay">...</span> <span class="hidden sm:inline">รายการ</span>
+                </div>
+                <div id="paginationControls" class="flex items-center"></div>
             </div>
 
-            <div id="paginationControls" class="flex items-center"></div>
+            <div class="hidden sm:block h-6 w-px bg-slate-300 mx-1"></div>
 
-            <div class="h-6 w-px bg-slate-300 mx-1"></div>
-
-            <div class="flex items-center gap-2 px-2">
-                <span class="text-xs text-slate-500 font-medium whitespace-nowrap">
-                    แสดง:
-                </span>
-                <div class="relative">
-                    <select id="limitFilter" onchange="filterTable(true)" 
-                        class="bg-transparent text-sm font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none pr-4 text-right">
-                        <option value="100" selected>100</option>
-                        <option value="500">500</option>
-                        <option value="1000">1000</option>
-                        <option value="all">All</option>
-                    </select>
-                    <div class="absolute inset-y-0 right-0 flex items-center pointer-events-none">
-                        <i class="fa-solid fa-caret-down text-slate-400 text-[10px]"></i>
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-500 font-medium whitespace-nowrap hidden sm:inline">แสดง:</span>
+                    <div class="relative">
+                        <select id="limitFilter" onchange="filterTable(true)" 
+                            class="bg-transparent text-sm font-bold text-slate-700 focus:outline-none cursor-pointer appearance-none pr-4 text-right">
+                            <option value="30" selected>30</option>
+                            <option value="100">100</option>
+                            <option value="500">500</option>
+                            <option value="1000">1000</option>
+                            <option value="all">All</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pointer-events-none">
+                            <i class="fa-solid fa-caret-down text-slate-400 text-[10px]"></i>
+                        </div>
                     </div>
                 </div>
+
+                <div class="flex items-center gap-1.5 pl-2 border-l border-slate-300 sm:border-0">
+                    
+                    <button onclick="clearData()" 
+                        class="bg-white hover:bg-red-50 text-red-500 border border-slate-300 hover:border-red-400 rounded shadow-sm transition-all w-8 h-8 flex items-center justify-center shrink-0"
+                        title="ล้างข้อมูลทั้งหมด">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+
+                    <button onclick="document.getElementById('importJsonInput').click()" 
+                        class="bg-white hover:bg-green-600 hover:text-white text-green-600 border border-slate-300 hover:border-green-600 rounded shadow-sm transition-all w-8 h-8 flex items-center justify-center shrink-0"
+                        title="นำเข้าข้อมูล (Import JSON)">
+                        <i class="fa-solid fa-file-import text-sm"></i>
+                    </button>
+
+                    <button onclick="syncData()" 
+                        class="bg-white hover:bg-blue-600 hover:text-white text-blue-600 border border-slate-300 hover:border-blue-600 rounded shadow-sm transition-all group w-8 h-8 flex items-center justify-center shrink-0"
+                        title="ดึงข้อมูลล่าสุด">
+                        <i class="fa-solid fa-rotate group-hover:animate-spin text-sm"></i>
+                    </button>
+                </div>
             </div>
-
-            <div class="h-6 w-px bg-slate-300 mx-1"></div>
-
-            <button onclick="clearData()" 
-                class="bg-white hover:bg-red-50 text-red-500 border border-slate-300 hover:border-red-400 p-1.5 rounded shadow-sm transition-all duration-200 w-8 h-8 flex items-center justify-center"
-                title="ล้างข้อมูลทั้งหมด (Clear Data)">
-                <i class="fa-solid fa-trash-can text-sm"></i>
-            </button>
-
-            <button onclick="syncData()" 
-                class="bg-white hover:bg-blue-600 hover:text-white text-slate-500 border border-slate-300 hover:border-blue-600 p-1.5 rounded shadow-sm transition-all duration-200 group w-8 h-8 flex items-center justify-center"
-                title="ดึงข้อมูลล่าสุด (Sync Data)">
-                <i class="fa-solid fa-rotate group-hover:animate-spin text-sm"></i>
-            </button>
 
         </div>
     </div>

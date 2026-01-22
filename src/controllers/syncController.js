@@ -2,16 +2,16 @@ const axios = require('axios');
 const OldLog = require('../models/OldLog');
 
 // ==========================================
-// Helper Function: บันทึกข้อมูลลง DB
+// Helper Function: Save data to DB
 // ==========================================
-// Return: true ถ้ามีการ Insert/Update, false ถ้าไม่มีการเปลี่ยนแปลง
+// Returns: true if Insert/Update occurred, false if no change
 const saveLogToDB = async (data) => {
     try {
-        // 1. ค้นหาข้อมูลเดิมจาก Ticket No.
+        // 1. Find existing data by Ticket No.
         const existingLog = await OldLog.findByPk(data.ticket_no);
 
         if (existingLog) {
-            // 2. ถ้ามีอยู่แล้ว: ลอง Set ค่าใหม่เข้าไป
+            // 2. If exists: Update values
             existingLog.set({
                 category: data.category || 'Uncategorized',
                 details: data.details || '',
@@ -26,15 +26,15 @@ const saveLogToDB = async (data) => {
                 status: data.status || 'closed'
             });
 
-            // 3. เช็คว่ามี Field ไหนเปลี่ยนไปหรือไม่?
+            // 3. Check for changes
             if (existingLog.changed()) {
-                await existingLog.save(); // บันทึกการแก้ไข
-                return true; // ✅ มีการเปลี่ยนแปลง
+                await existingLog.save(); // Save changes
+                return true; // ✅ Changed
             }
             
-            return false; // ❌ ข้อมูลเหมือนเดิม ไม่นับ
+            return false; // ❌ No change
         } else {
-            // 4. ถ้ายังไม่มี: สร้างใหม่เลย
+            // 4. If not exists: Create new
             await OldLog.create({
                 ticket_no: data.ticket_no,
                 category: data.category || 'Uncategorized',
@@ -49,7 +49,7 @@ const saveLogToDB = async (data) => {
                 responsible_dept: data.responsible_dept || '',
                 status: data.status || 'closed'
             });
-            return true; // ✅ สร้างใหม่ (นับ)
+            return true; // ✅ Created new
         }
     } catch (err) {
         console.error(`Error saving ticket ${data.ticket_no}:`, err.message);
@@ -149,10 +149,10 @@ exports.syncAllData = async (req, res) => {
 
         console.log(`[Sync] Finished. Updated/Inserted: ${updatedCount}`);
         
-        // ✅ 1. อัปเดตเวลาล่าสุดทันที (สำหรับ Manual Sync)
+        // ✅ 1. Update last sync time immediately (for Manual Sync)
         req.app.locals.lastSyncTime = new Date();
 
-        // ✅ 2. ส่ง Response กลับ
+        // ✅ 2. Send Response back
         res.json({ 
             success: true,
             message: 'Sync All Data Successful!', 
@@ -180,14 +180,14 @@ exports.runScheduledSync = async () => {
 
         let updatedCount = 0;
 
-        // Helper สำหรับ Loop ใน Cron (Logic เดียวกับด้านบน)
+        // Helper for Loop in Cron (Same Logic as above)
         const processItems = async (items, type) => {
             if (!Array.isArray(items)) return;
             for (const item of items) {
                 if (!item.ticket_on) continue;
                 let logData = {};
 
-                // Map Data ตามประเภท
+                // Map Data by Type
                 if (type === 'helpdesk') {
                     logData = {
                         ticket_no: item.ticket_on, category: item.category, details: item.details,
@@ -226,10 +226,68 @@ exports.runScheduledSync = async () => {
 
         console.log(`✅ Scheduled Sync Finished. Records Updated: ${updatedCount}`);
         
-        return true; // ✅ ส่งค่า true กลับไปให้ server.js เพื่อบอกว่าสำเร็จ (จะได้อัปเดตเวลา)
+        return true; // ✅ Return true to server.js to indicate success (so time can be updated)
 
     } catch (error) {
         console.error("❌ Scheduled Sync Failed:", error.message);
         return false;
+    }
+};
+
+// ==========================================
+// 📥 Function for Import JSON File (Manual Upload)
+// ==========================================
+exports.importManualData = async (req, res) => {
+    try {
+        const logs = req.body; // Receive JSON Array data
+
+        if (!Array.isArray(logs) || logs.length === 0) {
+            return res.status(400).json({ success: false, message: 'Invalid data format or empty list' });
+        }
+
+        let importedCount = 0;
+
+        for (const item of logs) {
+            // ✅ Use findOrCreate: If Ticket No exists, do not duplicate (prevent duplicates)
+            const [log, created] = await OldLog.findOrCreate({
+                where: { ticket_no: item.ticket_no },
+                defaults: {
+                    category: item.category || 'dev.app',
+                    details: item.details || '',
+                    solution: item.solution || '',
+                    cost: parseFloat(item.cost) || 0,
+                    reporter_name: item.reporter_name || 'System Import',
+                    reporter_dept: item.reporter_dept || '',
+                    
+                    // ✅ Map fields as requested (assigned_name -> responsible_person)
+                    responsible_person: item.assigned_name || item.responsible_person || '', 
+                    responsible_dept: item.assigned_dept || item.responsible_dept || '',
+                    
+                    created_date: item.created_date ? new Date(item.created_date) : new Date(),
+                    finished_date: item.finished_date ? new Date(item.finished_date) : null,
+                    status: item.status || 'closed'
+                }
+            });
+
+            if (created) {
+                importedCount++;
+            } 
+            // 💡 If you want to update old data too, add logic: else { await log.update(item); }
+        }
+
+        console.log(`📥 Imported ${importedCount} records from JSON.`);
+
+        // Update last sync time of the system
+        req.app.locals.lastSyncTime = new Date();
+
+        res.json({ 
+            success: true, 
+            message: `Import successfully! Added ${importedCount} new records`,
+            count: importedCount 
+        });
+
+    } catch (error) {
+        console.error('Import Error:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 };

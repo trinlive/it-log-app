@@ -1,0 +1,72 @@
+[
+  {
+    "ticket_no": "DEV260123001",
+    "category": "dev.ops",
+    "details": "Infrastructure: ติดตั้งและ Config Cloudflare Tunnel เพื่อเข้าถึง Portainer ผ่าน HTTPS",
+    "solution": "สร้าง Tunnel เชื่อมต่อ dev.biccorp.com ไปยัง localhost:9443 และตั้งค่า No TLS Verify สำเร็จ",
+    "status": "closed",
+    "cost": 0,
+    "reporter_name": "BIC CORP",
+    "reporter_dept": "IT",
+    "assigned_name": "ตฤณยาห์ วัชรวรพันธ์",
+    "assigned_dept": "IT",
+    "created_date": "2026-01-23 09:00:00",
+    "finished_date": "2026-01-23 10:30:00"
+  },
+  {
+    "ticket_no": "DEV260123002",
+    "category": "dev.ops",
+    "details": "Troubleshoot: แก้ไขปัญหา Error 502 Bad Gateway บน Cloudflare Tunnel",
+    "solution": "เปลี่ยน Target URL จาก localhost เป็น Internal IP 172.17.0.1 เพื่อให้ Cloudflared มองเห็น Portainer Container",
+    "status": "closed",
+    "cost": 0,
+    "reporter_name": "BIC CORP",
+    "reporter_dept": "IT",
+    "assigned_name": "ตฤณยาห์ วัชรวรพันธ์",
+    "assigned_dept": "IT",
+    "created_date": "2026-01-23 10:30:00",
+    "finished_date": "2026-01-23 11:30:00"
+  },
+  {
+    "ticket_no": "DEV260123003",
+    "category": "dev.app",
+    "details": "Deployment: นำ IT Log App ขึ้น Production บน GCP ผ่าน Portainer",
+    "solution": "สร้าง Stack ใหม่ เชื่อมต่อ Git Branch 'feature/import-json' และตั้งค่า Environment Variables (Google Auth)",
+    "status": "closed",
+    "cost": 0,
+    "reporter_name": "BIC CORP",
+    "reporter_dept": "IT",
+    "assigned_name": "ตฤณยาห์ วัชรวรพันธ์",
+    "assigned_dept": "IT",
+    "created_date": "2026-01-23 13:00:00",
+    "finished_date": "2026-01-23 14:30:00"
+  },
+  {
+    "ticket_no": "DEV260123004",
+    "category": "security.firewall",
+    "details": "Security Hardening: ปรับปรุง Firewall Rule บน Google Cloud Platform (GCP)",
+    "solution": "ปิด Port 80, 443, 9443 ทั้งหมด อนุญาตเฉพาะ SSH (Port 22) และเข้าใช้งานเว็บผ่าน Tunnel เท่านั้น",
+    "status": "closed",
+    "cost": 0,
+    "reporter_name": "BIC CORP",
+    "reporter_dept": "IT",
+    "assigned_name": "ตฤณยาห์ วัชรวรพันธ์",
+    "assigned_dept": "IT",
+    "created_date": "2026-01-23 15:00:00",
+    "finished_date": "2026-01-23 15:45:00"
+  },
+  {
+    "ticket_no": "DEV260123005",
+    "category": "dev.ops",
+    "details": "Research: ศึกษาแนวทางการติดตั้ง Samba AD บน Docker และความปลอดภัยของ Port",
+    "solution": "วางแผนการเชื่อมต่อ LDAP ภายใน Docker Network และกำหนด Policy ห้ามเปิด Port SMB (445) ออกสู่ Public",
+    "status": "closed",
+    "cost": 0,
+    "reporter_name": "BIC CORP",
+    "reporter_dept": "IT",
+    "assigned_name": "ตฤณยาห์ วัชรวรพันธ์",
+    "assigned_dept": "IT",
+    "created_date": "2026-01-23 16:00:00",
+    "finished_date": "2026-01-23 17:00:00"
+  }
+]

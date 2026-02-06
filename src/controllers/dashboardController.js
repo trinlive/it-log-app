@@ -1,6 +1,6 @@
 // src/controllers/dashboardController.js
 const OldLog = require('../models/OldLog');
-// const { categoryConfig } = require('../config/constants'); // ❌ ไม่จำเป็นต้องใช้ Config เดิมสำหรับการจัดกลุ่มนี้
+const { categoryConfig } = require('../config/constants'); 
 
 exports.getDashboard = async (req, res) => {
     try {
@@ -16,7 +16,7 @@ exports.getDashboard = async (req, res) => {
         let totalCost = 0;
         let monthlyStats = new Array(12).fill(0);
         let monthlyCosts = new Array(12).fill(0);
-        let catMap = {}; // ตัวแปรเก็บจำนวนของแต่ละกลุ่ม
+        let catMap = {}; 
         
         let countTotal = 0;
         let countClosed = 0;
@@ -24,21 +24,45 @@ exports.getDashboard = async (req, res) => {
         let countFix = 0;
 
         // 🛠️ ฟังก์ชันจัดกลุ่ม (Grouping Helper)
-        const getCategoryGroup = (category) => {
-            if (!category) return 'Other (อื่นๆ)';
-            const cat = category.trim();
+        const getCategoryGroup = (categoryRaw) => {
+            if (!categoryRaw) return 'Other (อื่นๆ)';
             
-            // Group 1: Permission (การจัดการสิทธิ์)
-            if (cat.startsWith('permission.') || cat.startsWith('permisssion.')) { // เช็ค permisssion (s 3 ตัว) เผื่อไว้
+            // แปลงชื่อไทย/อังกฤษเดิม ให้เป็น Label กลางก่อน
+            const configLabel = categoryConfig[categoryRaw.trim()]?.label || categoryRaw.trim();
+            
+            // ----------------------------------------------------
+            // 1. กลุ่มงานพัฒนาระบบคอมพิวเตอร์แม่ข่าย (Server + Dev)
+            // ----------------------------------------------------
+            if (configLabel === 'helpdesk.server' || configLabel.startsWith('dev.')) {
+                return 'Server System Development (พัฒนาระบบคอมพิวเตอร์แม่ข่าย)';
+            }
+
+            // ----------------------------------------------------
+            // 2. กลุ่มงานบริการ (Service/Meeting)
+            // ----------------------------------------------------
+            if (configLabel.startsWith('meeting.')) {
+                return 'Service (กลุ่มงานบริการ)';
+            }
+
+            // ----------------------------------------------------
+            // 3. กลุ่มงานกล้องวงจรปิด (CCTV)
+            // ----------------------------------------------------
+            if (configLabel.startsWith('cctv.')) {
+                return 'CCTV (งานกล้องวงจรปิด)';
+            }
+
+            // ----------------------------------------------------
+            // 4. การจัดการสิทธิ์ (Permission)
+            // ----------------------------------------------------
+            if (configLabel.startsWith('permission.') || configLabel.startsWith('permisssion.')) { 
                 return 'Permission (การจัดการสิทธิ์)';
             }
-            // Group 2: Helpdesk (งานสนับสนุน)
-            if (cat.startsWith('helpdesk.')) {
+            
+            // ----------------------------------------------------
+            // 5. งานสนับสนุน (Helpdesk) - *ไม่รวม Server แล้ว*
+            // ----------------------------------------------------
+            if (configLabel.startsWith('helpdesk.')) {
                 return 'Helpdesk (งานสนับสนุน)';
-            }
-            // Group 3: Services & Dev (บริการ & พัฒนา)
-            if (cat.startsWith('cctv.') || cat.startsWith('meeting.') || cat.startsWith('dev.')) {
-                return 'Services & Dev (บริการ & พัฒนา)';
             }
             
             return 'Other (อื่นๆ)';
@@ -53,16 +77,12 @@ exports.getDashboard = async (req, res) => {
                 
                 const status = (log.status || '').trim();
                 
-                // 1. เช็คสถานะ Closed
                 if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(status)) {
                     countClosed++;
-                } 
-                // 2. เช็คสถานะ Active (ไม่รวม Cancel และ Fix)
-                else if (!['cancelled', 'ยกเลิก', 'cancel', 'fix'].includes(status)) {
+                } else if (!['cancelled', 'ยกเลิก', 'cancel', 'fix'].includes(status)) {
                     countActive++;
                 }
 
-                // 3. กราฟรายเดือน & Cost
                 const monthIndex = date.getMonth();
                 monthlyStats[monthIndex]++;
                 
@@ -72,19 +92,15 @@ exports.getDashboard = async (req, res) => {
                     monthlyCosts[monthIndex] += cost;
                 }
 
-                // 4. ✅ นับหมวดหมู่แบบกลุ่ม (Group Counting)
-                const catRaw = (log.category || '').trim();
-                const groupName = getCategoryGroup(catRaw); // แปลงเป็นชื่อกลุ่มก่อนนับ
+                // นับหมวดหมู่แบบกลุ่ม
+                const groupName = getCategoryGroup(log.category); 
                 catMap[groupName] = (catMap[groupName] || 0) + 1;
             }
         });
 
-        // คำนวณ Fix = Total - Closed - Active
         countFix = countTotal - countClosed - countActive;
 
-        // เรียงลำดับจากมากไปน้อย
-        const sortedCats = Object.entries(catMap)
-            .sort(([,a], [,b]) => b - a);
+        const sortedCats = Object.entries(catMap).sort(([,a], [,b]) => b - a);
         
         const dashData = {
             total: countTotal,

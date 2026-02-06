@@ -9,7 +9,7 @@ exports.getDashboard = async (req, res) => {
         });
 
         // ============================================
-        // ✅ Dashboard Logic (ย้ายมาจาก server.js)
+        // ✅ Dashboard Logic
         // ============================================
         const currentYear = new Date().getFullYear();
         
@@ -21,39 +21,47 @@ exports.getDashboard = async (req, res) => {
         let countTotal = 0;
         let countClosed = 0;
         let countActive = 0;
+        let countFix = 0;
 
         logs.forEach(log => {
             if (!log.created_date) return;
             const date = new Date(log.created_date);
 
             if (date.getFullYear() === currentYear) {
-                countTotal++;
+                countTotal++; // นับทั้งหมด
                 
                 const status = (log.status || '').trim();
+                
+                // 1. เช็คสถานะ Closed (สำเร็จ/ปิดงาน)
                 if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(status)) {
                     countClosed++;
-                } else if (!['cancelled', 'ยกเลิก', 'cancel'].includes(status)) {
+                } 
+                // 2. เช็คสถานะ Active (กำลังดำเนินการ)
+                // เงื่อนไข: ต้องไม่ใช่ Cancel และไม่ใช่ Fix
+                else if (!['cancelled', 'ยกเลิก', 'cancel', 'fix'].includes(status)) {
                     countActive++;
                 }
 
+                // 3. จัดการข้อมูลกราฟรายเดือน
                 const monthIndex = date.getMonth();
-                
-                // 1. นับจำนวนงานรายเดือน
                 monthlyStats[monthIndex]++;
                 
-                // 2. รวมค่าใช้จ่าย
                 const cost = parseFloat(log.cost || 0);
                 if (!isNaN(cost)) {
                     totalCost += cost;
                     monthlyCosts[monthIndex] += cost;
                 }
 
-                // 3. นับหมวดหมู่
+                // 4. นับหมวดหมู่
                 const catRaw = (log.category || '').trim();
                 const catName = categoryConfig[catRaw]?.label || catRaw;
                 catMap[catName] = (catMap[catName] || 0) + 1;
             }
         });
+
+        // ✅ สูตรใหม่: Fix = TOTAL - CLOSED - ACTIVE
+        // (ค่าที่ได้จะรวมทั้งงานสถานะ 'fix' และ 'cancelled' เพื่อให้ยอดรวมเท่ากับ Total)
+        countFix = countTotal - countClosed - countActive;
 
         const sortedCats = Object.entries(catMap)
             .sort(([,a], [,b]) => b - a);
@@ -62,6 +70,7 @@ exports.getDashboard = async (req, res) => {
             total: countTotal,
             closed: countClosed,
             active: countActive,
+            fix: countFix, // ส่งค่า Fix ที่คำนวณใหม่ไปแสดงผล
             totalCost: totalCost,
             monthlyStats: monthlyStats,
             monthlyCosts: monthlyCosts,

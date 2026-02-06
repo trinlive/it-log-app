@@ -1,5 +1,5 @@
 /**
- * main.js (Updated: Fix Filter Logic & Total Display)
+ * main.js (Updated: Fix Status Formula & Labels)
  */
 
 let currentSort = { column: -1, direction: 'asc' };
@@ -87,8 +87,6 @@ function filterTable(resetPage = false) {
         const rowDateStr = row.getAttribute('data-created-date');
         
         // แปลงวันที่ของแถว (เช็คว่ามีค่าหรือไม่)
-        // ถ้า rowDateStr เป็นค่าว่าง -> rowDate จะเป็น null
-        // ถ้า rowDateStr มีค่า -> แปลงเป็น Date Object
         let rowDate = null;
         if (rowDateStr) {
             const d = new Date(rowDateStr);
@@ -98,8 +96,7 @@ function filterTable(resetPage = false) {
         const matchSearch = textContent.includes(searchText);
         const matchCategory = selectedCategory === "" || rowCategory === selectedCategory;
         
-        // ✅ แก้ไข Logic วันที่: 
-        // ถ้ามีการเลือกช่วงเวลา (Start หรือ End) แต่แถวนั้น "ไม่มีวันที่" -> ต้องซ่อน (matchDate = false)
+        // Logic วันที่: ถ้ามีการเลือกช่วงเวลา แต่แถวนั้น "ไม่มีวันที่" -> ต้องซ่อน
         let matchDate = true;
         if (startDate || endDate) {
             if (!rowDate) {
@@ -119,13 +116,13 @@ function filterTable(resetPage = false) {
 
     matchCount = matchedRows.length;
 
-    // ✅ ย้ายมาตรงนี้: อัปเดตตัวเลข "รายการ" ให้ตรงกับที่ Filter ได้จริง
+    // อัปเดตตัวเลข "รายการ" ให้ตรงกับที่ Filter ได้จริง
     const totalRecordsDisplay = document.getElementById('totalRecordsDisplay');
     if(totalRecordsDisplay) {
         totalRecordsDisplay.textContent = matchCount.toLocaleString(); 
     }
 
-    // เรียกฟังก์ชันคำนวณ Dashboard ใหม่ตามข้อมูลที่กรองได้ (Real-time)
+    // ✅ เรียกฟังก์ชันคำนวณ Dashboard ใหม่ตามข้อมูลที่กรองได้ (Real-time)
     updateDashboard(matchedRows);
 
     // 2. Pagination Calculation
@@ -163,6 +160,7 @@ function updateDashboard(visibleRows) {
     let countTotal = visibleRows.length;
     let countClosed = 0;
     let countActive = 0;
+    let countFix = 0;
     let totalCost = 0;
     
     // ตัวแปรสำหรับกราฟ (12 เดือน)
@@ -171,7 +169,7 @@ function updateDashboard(visibleRows) {
     let catMap = {};
 
     visibleRows.forEach(row => {
-        // ดึงข้อมูลจาก Data Attribute ที่เราเพิ่มใน table.ejs
+        // ดึงข้อมูลจาก Data Attribute
         const status = row.getAttribute('data-filter-status') || '';
         const cost = parseFloat(row.getAttribute('data-cost')) || 0;
         const dateStr = row.getAttribute('data-created-date');
@@ -181,7 +179,10 @@ function updateDashboard(visibleRows) {
         if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(status)) {
             countClosed++;
         } else if (!['cancelled', 'ยกเลิก', 'cancel'].includes(status)) {
-            countActive++;
+            // ✅ ปรับปรุง: ถ้าเป็น 'fix' ไม่นับเป็น Active (จะไปรวมใน Fix แทน)
+            if (status !== 'fix') {
+                countActive++;
+            }
         }
 
         // รวมค่าใช้จ่าย
@@ -203,23 +204,31 @@ function updateDashboard(visibleRows) {
         catMap[catLabel] = (catMap[catLabel] || 0) + 1;
     });
 
+    // ✅ สูตรใหม่: Fix = TOTAL - CLOSED - ACTIVE
+    countFix = countTotal - countClosed - countActive;
+
     // 1. อัปเดตตัวเลขหน้าจอ (Dashboard Stats)
-    const elTotal = document.getElementById('dashDisplayTotal');
-    if(elTotal) elTotal.innerText = countTotal.toLocaleString();
+    if(document.getElementById('dashDisplayTotal')) 
+        document.getElementById('dashDisplayTotal').innerText = countTotal.toLocaleString();
     
-    const elClosed = document.getElementById('dashDisplayClosed');
-    if(elClosed) elClosed.innerText = countClosed.toLocaleString();
+    if(document.getElementById('dashDisplayClosed')) 
+        document.getElementById('dashDisplayClosed').innerText = countClosed.toLocaleString();
     
-    const elActive = document.getElementById('dashDisplayActive');
-    if(elActive) elActive.innerText = countActive.toLocaleString();
+    if(document.getElementById('dashDisplayActive')) 
+        document.getElementById('dashDisplayActive').innerText = countActive.toLocaleString();
+
+    // ✅ อัปเดตตัวเลข Fix
+    if(document.getElementById('dashDisplayFix')) 
+        document.getElementById('dashDisplayFix').innerText = countFix.toLocaleString();
     
-    const elCost = document.getElementById('dashDisplayCost');
-    if(elCost) elCost.innerText = '฿' + totalCost.toLocaleString('th-TH', {maximumFractionDigits: 0});
+    if(document.getElementById('dashDisplayCost')) 
+        document.getElementById('dashDisplayCost').innerText = '฿' + totalCost.toLocaleString('th-TH', {maximumFractionDigits: 0});
 
     const elRate = document.getElementById('dashDisplaySuccessRate');
     if(elRate) {
         const rate = countTotal > 0 ? (countClosed / countTotal) * 100 : 0;
-        elRate.innerText = `${rate.toFixed(0)}% Success`;
+        // ✅ เปลี่ยนคำว่า Success เป็น สำเร็จ
+        elRate.innerText = `${rate.toFixed(0)}% สำเร็จ`;
     }
 
     // 2. อัปเดต Combined Chart (แท่ง/เส้น)

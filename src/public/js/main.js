@@ -1,5 +1,5 @@
 /**
- * main.js (Updated: Grouping Chart Logic - Merge Server & Dev)
+ * main.js (Updated: Grouping Chart Logic - Merge Service to Other)
  */
 
 let currentSort = { column: -1, direction: 'asc' };
@@ -101,28 +101,26 @@ function filterTable(resetPage = false) {
     renderPaginationControls(totalPages);
 }
 
-// 🛠️ ฟังก์ชันช่วยจัดกลุ่ม (Grouping Helper) - รวม Server & Dev
+// 🛠️ ฟังก์ชันช่วยจัดกลุ่ม (Grouping Helper) - Service ไปรวมกับ Other
 function getCategoryGroup(categoryLabelCode) {
     if (!categoryLabelCode) return 'Other (อื่นๆ)';
     const cat = categoryLabelCode.trim();
     
-    // 1. Server System Development (Server + Dev)
+    // 1. Server System Development
     if (cat === 'helpdesk.server' || cat.startsWith('dev.')) {
         return 'Server System Development (พัฒนาระบบคอมพิวเตอร์แม่ข่าย)';
     }
 
-    // 2. Service (Meeting)
-    if (cat.startsWith('meeting.')) return 'Service (กลุ่มงานบริการ)';
-
-    // 3. CCTV
+    // 2. CCTV
     if (cat.startsWith('cctv.')) return 'CCTV (งานกล้องวงจรปิด)';
 
-    // 4. Permission
+    // 3. Permission
     if (cat.startsWith('permission.') || cat.startsWith('permisssion.')) return 'Permission (การจัดการสิทธิ์)';
     
-    // 5. Helpdesk (ทั่วไป) - เช็คสุดท้าย
+    // 4. Helpdesk
     if (cat.startsWith('helpdesk.')) return 'Helpdesk (งานสนับสนุน)';
     
+    // 5. Other (รวม Meeting/Service)
     return 'Other (อื่นๆ)';
 }
 

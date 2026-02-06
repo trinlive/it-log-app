@@ -30,7 +30,7 @@
                             data-filter-category="<%= (log.category || '').trim() %>" 
                             data-category-label="<%= getCategoryLabel(log.category) %>"
                             data-filter-status="<%= (log.status || '').trim() %>"
-                            data-created-date="<%= log.created_date %>"
+                            data-created-date="<%= log.created_date ? new Date(log.created_date).toISOString() : '' %>"
                             data-cost="<%= log.cost || 0 %>">
                             
                             <td class="px-6 py-4 whitespace-nowrap" data-sort="<%= log.ticket_no %>">

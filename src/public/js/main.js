@@ -1,5 +1,5 @@
 /**
- * main.js (Updated: Real-time Dashboard Calculation)
+ * main.js (Updated: Fix Filter Logic & Total Display)
  */
 
 let currentSort = { column: -1, direction: 'asc' };
@@ -61,8 +61,12 @@ function filterTable(resetPage = false) {
     // Date Filters
     const startDateVal = document.getElementById('startDateFilter').value;
     const endDateVal = document.getElementById('endDateFilter').value;
+    
+    // แปลงวันที่เริ่มต้น (00:00:00)
     const startDate = startDateVal ? new Date(startDateVal) : null;
     if(startDate) startDate.setHours(0,0,0,0);
+    
+    // แปลงวันที่สิ้นสุด (23:59:59)
     const endDate = endDateVal ? new Date(endDateVal) : null;
     if(endDate) endDate.setHours(23,59,59,999); 
 
@@ -72,12 +76,6 @@ function filterTable(resetPage = false) {
     
     const tableBody = document.getElementById('tableBody');
     const rows = tableBody.querySelectorAll('tr.table-row'); 
-    
-    // อัปเดต Total Records
-    const totalRecordsDisplay = document.getElementById('totalRecordsDisplay');
-    if(totalRecordsDisplay) {
-        totalRecordsDisplay.textContent = rows.length.toLocaleString(); 
-    }
 
     let matchCount = 0;
     const matchedRows = [];
@@ -87,15 +85,29 @@ function filterTable(resetPage = false) {
         const textContent = row.innerText.toLowerCase();
         const rowCategory = row.getAttribute('data-filter-category'); 
         const rowDateStr = row.getAttribute('data-created-date');
-        const rowDate = rowDateStr ? new Date(rowDateStr) : null;
+        
+        // แปลงวันที่ของแถว (เช็คว่ามีค่าหรือไม่)
+        // ถ้า rowDateStr เป็นค่าว่าง -> rowDate จะเป็น null
+        // ถ้า rowDateStr มีค่า -> แปลงเป็น Date Object
+        let rowDate = null;
+        if (rowDateStr) {
+            const d = new Date(rowDateStr);
+            if (!isNaN(d)) rowDate = d;
+        }
 
         const matchSearch = textContent.includes(searchText);
         const matchCategory = selectedCategory === "" || rowCategory === selectedCategory;
         
+        // ✅ แก้ไข Logic วันที่: 
+        // ถ้ามีการเลือกช่วงเวลา (Start หรือ End) แต่แถวนั้น "ไม่มีวันที่" -> ต้องซ่อน (matchDate = false)
         let matchDate = true;
-        if (rowDate) {
-            if (startDate && rowDate < startDate) matchDate = false;
-            if (endDate && rowDate > endDate) matchDate = false;
+        if (startDate || endDate) {
+            if (!rowDate) {
+                matchDate = false; 
+            } else {
+                if (startDate && rowDate < startDate) matchDate = false;
+                if (endDate && rowDate > endDate) matchDate = false;
+            }
         }
 
         if (matchSearch && matchCategory && matchDate) {
@@ -107,7 +119,13 @@ function filterTable(resetPage = false) {
 
     matchCount = matchedRows.length;
 
-    // ✅ เรียกฟังก์ชันคำนวณ Dashboard ใหม่ตามข้อมูลที่กรองได้ (Real-time)
+    // ✅ ย้ายมาตรงนี้: อัปเดตตัวเลข "รายการ" ให้ตรงกับที่ Filter ได้จริง
+    const totalRecordsDisplay = document.getElementById('totalRecordsDisplay');
+    if(totalRecordsDisplay) {
+        totalRecordsDisplay.textContent = matchCount.toLocaleString(); 
+    }
+
+    // เรียกฟังก์ชันคำนวณ Dashboard ใหม่ตามข้อมูลที่กรองได้ (Real-time)
     updateDashboard(matchedRows);
 
     // 2. Pagination Calculation
@@ -262,7 +280,7 @@ function changePage(newPage) {
     filterTable(false);
 }
 
-// === 🔄 Sync Data (เหมือนเดิม) ===
+// === 🔄 Sync Data ===
 async function syncData() {
     Swal.fire({
         title: 'กำลัง Sync ข้อมูล...',
@@ -297,7 +315,7 @@ async function syncData() {
     }
 }
 
-// === 🗑️ Clear Data (เหมือนเดิม) ===
+// === 🗑️ Clear Data ===
 async function clearData() {
     const result = await Swal.fire({
         title: 'ยืนยันการลบข้อมูล?',

@@ -19,14 +19,14 @@
         
         <div class="p-4 rounded-lg bg-blue-50 border border-blue-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
             <div class="text-xs text-blue-600 font-semibold mb-1 uppercase tracking-wider">Total</div>
-            <div class="text-xl md:text-2xl font-bold text-blue-800"><%= dashData.total %></div>
+            <div id="dashDisplayTotal" class="text-xl md:text-2xl font-bold text-blue-800"><%= dashData.total %></div>
             <div class="text-[10px] text-blue-500 mt-1 truncate">งานทั้งหมด</div>
         </div>
 
         <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
             <div class="text-xs text-emerald-600 font-semibold mb-1 uppercase tracking-wider">Closed</div>
-            <div class="text-xl md:text-2xl font-bold text-emerald-800"><%= dashData.closed %></div>
-            <div class="text-[10px] text-emerald-500 mt-1 truncate">
+            <div id="dashDisplayClosed" class="text-xl md:text-2xl font-bold text-emerald-800"><%= dashData.closed %></div>
+            <div id="dashDisplaySuccessRate" class="text-[10px] text-emerald-500 mt-1 truncate">
                 <% if(dashData.total > 0) { %>
                     <%= ((dashData.closed / dashData.total) * 100).toFixed(0) %>% Success
                 <% } else { %>
@@ -37,13 +37,13 @@
 
         <div class="p-4 rounded-lg bg-amber-50 border border-amber-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
             <div class="text-xs text-amber-600 font-semibold mb-1 uppercase tracking-wider">Active</div>
-            <div class="text-xl md:text-2xl font-bold text-amber-800"><%= dashData.active %></div>
+            <div id="dashDisplayActive" class="text-xl md:text-2xl font-bold text-amber-800"><%= dashData.active %></div>
             <div class="text-[10px] text-amber-500 mt-1 truncate">รอตรวจสอบ</div>
         </div>
 
         <div class="p-4 rounded-lg bg-indigo-50 border border-indigo-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
             <div class="text-xs text-indigo-600 font-semibold mb-1 uppercase tracking-wider">Cost</div>
-            <div class="text-xl md:text-2xl font-bold text-indigo-800 truncate">
+            <div id="dashDisplayCost" class="text-xl md:text-2xl font-bold text-indigo-800 truncate">
                 ฿<%= dashData.totalCost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
             </div>
             <div class="text-[10px] text-indigo-500 mt-1 truncate">งบประมาณ</div>
@@ -95,7 +95,6 @@
         }
 
         const reader = new FileReader();
-        
         reader.onload = async (e) => {
             try {
                 // 🛡️ 2. ตรวจสอบโครงสร้าง JSON
@@ -136,7 +135,8 @@
                 });
 
                 if (!confirmResult.isConfirmed) {
-                    input.value = ''; return;
+                    input.value = '';
+                    return;
                 }
 
                 // ⏳ 4. Loading & Sending
@@ -151,7 +151,6 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-
                 const result = await res.json();
 
                 // ✅ 5. Success
@@ -185,7 +184,9 @@
     // 📊 Chart 1: Combined Chart
     // ==========================================
     const ctxCombined = document.getElementById('combinedChart').getContext('2d');
-    new Chart(ctxCombined, {
+    
+    // ✅ เปลี่ยนเป็น window.combinedChart เพื่อให้ main.js เข้าถึงได้
+    window.combinedChart = new Chart(ctxCombined, {
         type: 'bar',
         data: {
             labels: months,
@@ -216,7 +217,7 @@
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false, // สำคัญสำหรับ Responsive Chart
+            maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { position: 'bottom' },
@@ -226,7 +227,6 @@
                             let label = context.dataset.label || '';
                             if (label) label += ': ';
                             if (context.dataset.yAxisID === 'y1') {
-                                // ✅ Tooltip แสดงทศนิยม 2 ตำแหน่งด้วย
                                 label += '฿' + context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                             } else {
                                 label += context.raw + ' งาน';
@@ -259,7 +259,8 @@
         '#64748b', '#a8a29e', '#78716c', '#0f766e'
     ];
 
-    new Chart(ctxCat, {
+    // ✅ เปลี่ยนเป็น window.categoryChart
+    window.categoryChart = new Chart(ctxCat, {
         type: 'doughnut',
         data: {
             labels: chartData.categoryLabels,
@@ -272,7 +273,7 @@
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false, // สำคัญสำหรับ Responsive Chart
+            maintainAspectRatio: false,
             plugins: {
                 legend: { 
                     position: 'bottom',

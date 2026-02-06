@@ -1,5 +1,5 @@
 /**
- * main.js (Updated: Pagination in Top Filter Bar)
+ * main.js (Updated: Real-time Dashboard Calculation)
  */
 
 let currentSort = { column: -1, direction: 'asc' };
@@ -7,7 +7,6 @@ let currentPage = 1;
 
 // === 🔃 Sort Table ===
 function sortTable(columnIndex, type = 'text') {
-    const table = document.getElementById("mainTable");
     const tbody = document.getElementById("tableBody");
     const rows = Array.from(tbody.querySelectorAll("tr.table-row"));
     
@@ -36,7 +35,9 @@ function sortTable(columnIndex, type = 'text') {
 
     rows.forEach(row => tbody.appendChild(row));
     currentPage = 1;
-    filterTable();
+    
+    // เรียก filterTable อีกครั้งเพื่ออัปเดตหน้า Dashboard หลังเรียงลำดับ
+    filterTable(); 
 }
 
 function updateSortIcons(columnIndex, direction) {
@@ -50,7 +51,7 @@ function updateSortIcons(columnIndex, direction) {
     activeIcon.style.opacity = "1";
 }
 
-// === 🚀 Filter Table & Pagination Logic ===
+// === 🚀 Filter Table & Update Dashboard ===
 function filterTable(resetPage = false) {
     if (resetPage) currentPage = 1;
 
@@ -72,10 +73,9 @@ function filterTable(resetPage = false) {
     const tableBody = document.getElementById('tableBody');
     const rows = tableBody.querySelectorAll('tr.table-row'); 
     
-    // ✅ อัปเดต Total Records (จำนวนทั้งหมดในระบบที่โหลดมา)
+    // อัปเดต Total Records
     const totalRecordsDisplay = document.getElementById('totalRecordsDisplay');
     if(totalRecordsDisplay) {
-        // ใช้ toLocaleString ให้มีลูกน้ำคั่น (เช่น 1,250)
         totalRecordsDisplay.textContent = rows.length.toLocaleString(); 
     }
 
@@ -107,6 +107,9 @@ function filterTable(resetPage = false) {
 
     matchCount = matchedRows.length;
 
+    // ✅ เรียกฟังก์ชันคำนวณ Dashboard ใหม่ตามข้อมูลที่กรองได้ (Real-time)
+    updateDashboard(matchedRows);
+
     // 2. Pagination Calculation
     const totalPages = Math.ceil(matchCount / itemsPerPage) || 1;
     if (currentPage > totalPages) currentPage = totalPages;
@@ -134,16 +137,100 @@ function filterTable(resetPage = false) {
         noResultsRow.classList.add('hidden');
     }
 
-    // 5. Render Controls
     renderPaginationControls(totalPages);
 }
 
-// ✅ วาดปุ่ม Pagination ในตำแหน่งใหม่ (ข้างบน)
+// === 📊 Real-time Dashboard Update Function ===
+function updateDashboard(visibleRows) {
+    let countTotal = visibleRows.length;
+    let countClosed = 0;
+    let countActive = 0;
+    let totalCost = 0;
+    
+    // ตัวแปรสำหรับกราฟ (12 เดือน)
+    let monthlyStats = new Array(12).fill(0);
+    let monthlyCosts = new Array(12).fill(0);
+    let catMap = {};
+
+    visibleRows.forEach(row => {
+        // ดึงข้อมูลจาก Data Attribute ที่เราเพิ่มใน table.ejs
+        const status = row.getAttribute('data-filter-status') || '';
+        const cost = parseFloat(row.getAttribute('data-cost')) || 0;
+        const dateStr = row.getAttribute('data-created-date');
+        const catLabel = row.getAttribute('data-category-label') || 'Other';
+
+        // นับสถานะ
+        if (['closed', 'เสร็จสิ้น', 'เรียบร้อย'].includes(status)) {
+            countClosed++;
+        } else if (!['cancelled', 'ยกเลิก', 'cancel'].includes(status)) {
+            countActive++;
+        }
+
+        // รวมค่าใช้จ่าย
+        totalCost += cost;
+
+        // ข้อมูลกราฟรายเดือน
+        if (dateStr) {
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                const monthIdx = d.getMonth(); // 0-11
+                if(monthIdx >= 0 && monthIdx < 12) {
+                    monthlyStats[monthIdx]++;
+                    monthlyCosts[monthIdx] += cost;
+                }
+            }
+        }
+
+        // ข้อมูลกราฟหมวดหมู่
+        catMap[catLabel] = (catMap[catLabel] || 0) + 1;
+    });
+
+    // 1. อัปเดตตัวเลขหน้าจอ (Dashboard Stats)
+    const elTotal = document.getElementById('dashDisplayTotal');
+    if(elTotal) elTotal.innerText = countTotal.toLocaleString();
+    
+    const elClosed = document.getElementById('dashDisplayClosed');
+    if(elClosed) elClosed.innerText = countClosed.toLocaleString();
+    
+    const elActive = document.getElementById('dashDisplayActive');
+    if(elActive) elActive.innerText = countActive.toLocaleString();
+    
+    const elCost = document.getElementById('dashDisplayCost');
+    if(elCost) elCost.innerText = '฿' + totalCost.toLocaleString('th-TH', {maximumFractionDigits: 0});
+
+    const elRate = document.getElementById('dashDisplaySuccessRate');
+    if(elRate) {
+        const rate = countTotal > 0 ? (countClosed / countTotal) * 100 : 0;
+        elRate.innerText = `${rate.toFixed(0)}% Success`;
+    }
+
+    // 2. อัปเดต Combined Chart (แท่ง/เส้น)
+    if (window.combinedChart) {
+        window.combinedChart.data.datasets[0].data = monthlyStats;
+        window.combinedChart.data.datasets[1].data = monthlyCosts;
+        window.combinedChart.update();
+    }
+
+    // 3. อัปเดต Category Chart (โดนัท)
+    if (window.categoryChart) {
+        const sortedCats = Object.entries(catMap).sort(([,a], [,b]) => b - a);
+        const labels = sortedCats.map(([k]) => k);
+        const counts = sortedCats.map(([,v]) => {
+            // คำนวณเป็น % สำหรับกราฟ Doughnut
+            return countTotal > 0 ? ((v / countTotal) * 100).toFixed(2) : 0;
+        });
+
+        window.categoryChart.data.labels = labels;
+        window.categoryChart.data.datasets[0].data = counts;
+        window.categoryChart.update();
+    }
+}
+
+// ✅ วาดปุ่ม Pagination
 function renderPaginationControls(totalPages) {
     const paginationContainer = document.getElementById('paginationControls');
     if (!paginationContainer) return;
 
-    // ถ้ามีหน้าเดียว หรือไม่มีข้อมูล ไม่ต้องโชว์ปุ่มกด
     if (totalPages <= 1) {
         paginationContainer.innerHTML = '';
         return;
@@ -175,7 +262,7 @@ function changePage(newPage) {
     filterTable(false);
 }
 
-// === 🔄 Sync Data ===
+// === 🔄 Sync Data (เหมือนเดิม) ===
 async function syncData() {
     Swal.fire({
         title: 'กำลัง Sync ข้อมูล...',
@@ -210,7 +297,7 @@ async function syncData() {
     }
 }
 
-// === 🗑️ Clear Data ===
+// === 🗑️ Clear Data (เหมือนเดิม) ===
 async function clearData() {
     const result = await Swal.fire({
         title: 'ยืนยันการลบข้อมูล?',
@@ -252,5 +339,6 @@ async function clearData() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // เรียกใช้ครั้งแรกเพื่ออัปเดต Dashboard ทันที
     filterTable(true);
 });

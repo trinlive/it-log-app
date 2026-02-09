@@ -37,11 +37,6 @@ exports.getDashboard = async (req, res) => {
                 return 'Server System Development (พัฒนาระบบคอมพิวเตอร์แม่ข่าย)';
             }
 
-            // ❌ ลบกลุ่ม Service (meeting) ออก เพื่อให้ไปรวมกับ Other
-            // if (configLabel.startsWith('meeting.')) {
-            //     return 'Service (กลุ่มงานบริการ)';
-            // }
-
             // ----------------------------------------------------
             // 2. กลุ่มงานกล้องวงจรปิด (CCTV)
             // ----------------------------------------------------

@@ -1,0 +1,317 @@
+<div class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-slate-200 mb-6 transition-all">
+    
+    <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-3">
+        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-blue-600"></i> 
+            Dashboard <%= new Date().getFullYear() %>
+        </h2>
+
+        <div class="flex items-center gap-2 self-start md:self-auto">
+             <span class="text-[10px] md:text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded font-mono border border-slate-200 whitespace-nowrap">
+                <i class="fa-regular fa-clock mr-1"></i><%= formatSyncTime(lastSyncTime) %>
+            </span>
+        </div>
+        
+        <input type="file" id="importJsonInput" accept=".json" class="hidden" onchange="handleImport(this)">
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-6">
+        
+        <div class="p-4 rounded-lg bg-blue-50 border border-blue-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
+            <div class="text-xs text-blue-600 font-semibold mb-1 uppercase tracking-wider">Total</div>
+            <div id="dashDisplayTotal" class="text-xl md:text-2xl font-bold text-blue-800"><%= dashData.total %></div>
+            <div class="text-[10px] text-blue-500 mt-1 truncate">งานทั้งหมด</div>
+        </div>
+
+        <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
+            <div class="text-xs text-emerald-600 font-semibold mb-1 uppercase tracking-wider">Closed</div>
+            <div id="dashDisplayClosed" class="text-xl md:text-2xl font-bold text-emerald-800"><%= dashData.closed %></div>
+            <div id="dashDisplaySuccessRate" class="text-[10px] text-emerald-500 mt-1 truncate">
+                <% if(dashData.total > 0) { %>
+                    <%= ((dashData.closed / dashData.total) * 100).toFixed(0) %>% สำเร็จ
+                <% } else { %>
+                    0% สำเร็จ
+                <% } %>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-lg bg-amber-50 border border-amber-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
+            <div class="text-xs text-amber-600 font-semibold mb-1 uppercase tracking-wider">Active</div>
+            <div id="dashDisplayActive" class="text-xl md:text-2xl font-bold text-amber-800"><%= dashData.active %></div>
+            <div class="text-[10px] text-amber-500 mt-1 truncate">รอตรวจสอบ</div>
+        </div>
+
+        <div class="p-4 rounded-lg bg-orange-50 border border-orange-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
+            <div class="text-xs text-orange-600 font-semibold mb-1 uppercase tracking-wider">In Progress</div>
+            <div id="dashDisplayFix" class="text-xl md:text-2xl font-bold text-orange-800"><%= dashData.fix || 0 %></div>
+            <div class="text-[10px] text-orange-500 mt-1 truncate">กำลังดำเนินการ</div>
+        </div>
+
+        <div class="p-4 rounded-lg bg-indigo-50 border border-indigo-100 flex flex-col justify-between h-full hover:shadow-sm transition-shadow">
+            <div class="text-xs text-indigo-600 font-semibold mb-1 uppercase tracking-wider">Cost</div>
+            <div id="dashDisplayCost" class="text-xl md:text-2xl font-bold text-indigo-800 truncate">
+                ฿<%= dashData.totalCost.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+            </div>
+            <div class="text-[10px] text-indigo-500 mt-1 truncate">งบประมาณ</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 bg-white p-4 rounded-lg border border-slate-100 shadow-sm">
+            <h3 class="text-sm font-semibold text-slate-700 mb-4 text-center">📊 สถิติรายเดือน</h3>
+            <div class="relative h-64 md:h-80 w-full">
+                <canvas id="combinedChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-lg border border-slate-100 shadow-sm">
+            <h3 class="text-sm font-semibold text-slate-700 mb-4 text-center">🍩 สัดส่วนงาน</h3>
+            <div class="relative h-64 md:h-80 w-full flex justify-center">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // --- Data Preparation ---
+    const chartData = <%- JSON.stringify(dashData) %>;
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+    // ==========================================
+    // ⚙️ Function: Handle Import JSON
+    // ==========================================
+    async function handleImport(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // 🛡️ 1. ตรวจสอบนามสกุลไฟล์
+        if (!file.name.toLowerCase().endsWith('.json')) {
+            await Swal.fire({
+                icon: 'error',
+                title: 'ชนิดไฟล์ไม่ถูกต้อง',
+                text: 'กรุณาอัปโหลดไฟล์นามสกุล .json เท่านั้น'
+            });
+            input.value = ''; 
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                // 🛡️ 2. ตรวจสอบโครงสร้าง JSON
+                const jsonContent = e.target.result;
+                let data;
+                try {
+                    data = JSON.parse(jsonContent);
+                } catch (err) {
+                    throw new Error('ไฟล์ JSON เสียหายหรือไม่ถูกต้อง (Parse Error)');
+                }
+
+                if (!Array.isArray(data)) {
+                    throw new Error('รูปแบบข้อมูลผิด: ข้อมูลต้องเป็น List (Array) ของรายการ');
+                }
+                if (data.length > 0 && !data[0].hasOwnProperty('ticket_no')) {
+                    throw new Error('โครงสร้างข้อมูลผิด: ไม่พบฟิลด์ "ticket_no"');
+                }
+
+                // 📝 3. แสดง Popup ยืนยัน
+                const confirmResult = await Swal.fire({
+                    title: 'ยืนยันการนำเข้าข้อมูล',
+                    html: `
+                        <div class="text-left text-sm text-slate-600 bg-slate-50 p-3 rounded border border-slate-200">
+                            <p><b>📂 ไฟล์:</b> ${file.name}</p>
+                            <p><b>📦 ขนาด:</b> ${(file.size / 1024).toFixed(2)} KB</p>
+                            <p><b>🔢 จำนวน:</b> ${data.length} รายการ</p>
+                        </div>
+                        <p class="mt-2 text-xs text-slate-500">*ข้อมูลที่ Ticket No ซ้ำ จะถูกข้าม</p>
+                    `,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonColor: '#16a34a',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'ยืนยัน Import',
+                    cancelButtonText: 'ยกเลิก'
+                });
+
+                if (!confirmResult.isConfirmed) {
+                    input.value = '';
+                    return;
+                }
+
+                // ⏳ 4. Loading & Sending
+                Swal.fire({
+                    title: 'กำลังนำเข้าข้อมูล...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+
+                const res = await fetch('/api/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                // ✅ 5. Success
+                if (result.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'เสร็จสิ้น!',
+                        text: result.message,
+                        confirmButtonText: 'ตกลง'
+                    });
+                    window.location.reload();
+                } else {
+                    throw new Error(result.message);
+                }
+
+            } catch (err) {
+                console.error(err);
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Import ล้มเหลว',
+                    text: err.message || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+                });
+            } finally {
+                input.value = ''; 
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // ==========================================
+    // 📊 Chart 1: Combined Chart
+    // ==========================================
+    const ctxCombined = document.getElementById('combinedChart').getContext('2d');
+    
+    // ✅ window.combinedChart เพื่อให้ main.js เข้าถึงได้
+    window.combinedChart = new Chart(ctxCombined, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'จำนวนงาน (Ticket)',
+                    data: chartData.monthlyStats,
+                    backgroundColor: '#3b82f6',
+                    order: 2,
+                    yAxisID: 'y',
+                    borderRadius: 4
+                },
+                {
+                    label: 'ค่าใช้จ่าย (บาท)',
+                    data: chartData.monthlyCosts,
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#f59e0b',
+                    type: 'line',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#f59e0b',
+                    pointRadius: 4,
+                    order: 1,
+                    yAxisID: 'y1',
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom' },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.dataset.yAxisID === 'y1') {
+                                label += '฿' + context.raw.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                            } else {
+                                label += context.raw + ' งาน';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { type: 'linear', display: true, position: 'left', beginAtZero: true },
+                y1: { 
+                    type: 'linear', display: true, position: 'right', beginAtZero: true, 
+                    grid: { drawOnChartArea: false },
+                    ticks: { callback: function(value) { return '฿' + value.toLocaleString('th-TH', { notation: "compact" }); } }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // ==========================================
+    // 🍩 Chart 2: Category Chart
+    // ==========================================
+    const ctxCat = document.getElementById('categoryChart').getContext('2d');
+    const backgroundColors = [
+        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+        '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6',
+        '#0ea5e9', '#84cc16', '#eab308', '#f43f5e',
+        '#64748b', '#a8a29e', '#78716c', '#0f766e'
+    ];
+
+    // ✅ window.categoryChart
+    window.categoryChart = new Chart(ctxCat, {
+        type: 'doughnut',
+        data: {
+            labels: chartData.categoryLabels,
+            datasets: [{
+                data: chartData.categoryCounts,
+                backgroundColor: backgroundColors,
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    position: 'bottom',
+                    labels: { 
+                        boxWidth: 10, 
+                        font: { size: 10 },
+                        padding: 15,
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                return data.labels.map((label, i) => {
+                                    const value = data.datasets[0].data[i];
+                                    const fillStyle = data.datasets[0].backgroundColor[i % data.datasets[0].backgroundColor.length];
+                                    return {
+                                        text: `${label} ${value}%`, 
+                                        fillStyle: fillStyle,
+                                        hidden: isNaN(data.datasets[0].data[i]),
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
+                    } 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return (context.label || '') + ': ' + context.raw + '%';
+                        }
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+</script>

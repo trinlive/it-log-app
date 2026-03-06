@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: it-log-app
+    build: .
+    ports:
+      - "38000:3000"
+    environment:
+      - PORT=3000
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASS=gUm9LCWcag
+      - DB_NAME=itlogs
+      - TZ=Asia/Bangkok
+      
+      # ✅ เรียกใช้ค่าจาก .env แทนการใส่รหัสตรงๆ
+      - SESSION_SECRET=${SESSION_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL}
+
+    depends_on:
+      - db
+    networks:
+      - app-network
+    restart: always
+
+  db:
+    image: mariadb:10.6
+    container_name: it-log-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=gUm9LCWcag
+      - MYSQL_DATABASE=itlogs
+      - TZ=Asia/Bangkok
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - app-network
+    restart: always
+
+  # ✅ ส่วนที่เพิ่ม: Cloudflare Tunnel
+  tunnel:
+    container_name: cloudflared-tunnel
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel --no-autoupdate run --token eyJhIjoiYzNhMTI1MDJkNTQ1MmQzOGI1NmUzODVhZDdhZGYyOGMiLCJ0IjoiZGI3ODRiZDYtMDFlYi00ZWQ5LTg2MTUtNmEwNDA4M2YwNGNmIiwicyI6Ik1tUmlOVFpoT1dNdE1qQmxNaTAwWmpRM0xXSTJPV0l0TWpKalpETTJaakU0WTJGbSJ9
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+    name: app-network 
+
+volumes:
+  db_data:

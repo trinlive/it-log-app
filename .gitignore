@@ -1,0 +1,6 @@
+node_modules/
+.env
+.DS_Store
+note.txt
+trinyah/
+README.md

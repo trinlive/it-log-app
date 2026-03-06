@@ -1,0 +1,27 @@
+<div class="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
+    <div>
+        <div class="flex items-center gap-3 mb-1">
+            <div class="bg-blue-600 text-white p-2 rounded-lg shadow-sm">
+                <i class="fa-solid fa-server text-xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-800 tracking-tight">IT Helpdesk Logs</h1>
+        </div>
+   
+        <p class="text-sm text-slate-500 ml-1">
+            <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+                ผู้ใช้งาน: <span class="font-semibold text-blue-600"><%= currentUser.name %></span>
+            <% } else { %>
+                ระบบข้อมูลย้อนหลัง (Legacy Data Management)
+            <% } %>
+        </p>
+    </div>
+    
+    <div class="flex gap-3">
+        <a href="/logout" 
+            class="group bg-white hover:bg-slate-100 text-slate-500 hover:text-red-600 font-medium py-2.5 px-4 rounded-lg shadow-sm border border-slate-200 hover:border-red-200 transition-all duration-200 flex items-center gap-2"
+            title="ออกจากระบบ">
+            <i class="fa-solid fa-right-from-bracket"></i>
+            <span class="hidden sm:inline">Logout</span>
+        </a>
+    </div>
+</div>

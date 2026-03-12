@@ -10,8 +10,7 @@ const ALLOWED_USERS = [
     'pakon@jbf.co.th',
     'chotchayanon@bicchemical.com',
     'peerawas@biccorporation.co.th',
-    'tanakorn@biccorporation.co.th'
-
+    'tanakorn.t@biccorporation.co.th'
 
 ];
 
